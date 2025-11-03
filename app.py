@@ -515,12 +515,12 @@ def pagina_prevent():
         # --- REMOVIDO O st.form ---
         
         sexo_str = st.radio("Sexo Biológico", ["Feminino", "Masculino"], horizontal=True, key="sex")
-        age = st.number_input("Idade (anos)", min_value=30, max_value=79, value=55, step=1, key="age")
-        bmi = st.number_input("Índice de Massa Corporal (IMC) (kg/m²)", min_value=15.0, max_value=60.0, value=25.0, step=0.1, format="%.1f", key="bmi")
-        tc = st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, value=200, step=1, key="tc")
-        hdl = st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, value=50, step=1, key="hdl")
-        sbp = st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, value=120, step=1, key="sbp")
-        egfr = st.number_input("Taxa de Filtração Glomerular (eGFR) (mL/min/1.73 m²)", min_value=10, max_value=150, value=90, step=1, key="egfr")
+        age = st.number_input("Idade (anos)", min_value=30, max_value=79, value=None, step=1, key="age", placeholder="30-79")
+        bmi = st.number_input("Índice de Massa Corporal (IMC) (kg/m²)", min_value=15.0, max_value=60.0, value=None, step=0.1, format="%.1f", key="bmi", placeholder="Ex: 25.0")
+        tc = st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, value=None, step=1, key="tc", placeholder="Ex: 200")
+        hdl = st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, value=None, step=1, key="hdl", placeholder="Ex: 50")
+        sbp = st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, value=None, step=1, key="sbp", placeholder="Ex: 120")
+        egfr = st.number_input("Taxa de Filtração Glomerular (eGFR) (mL/min/1.73 m²)", min_value=10, max_value=150, value=None, step=1, key="egfr", placeholder="Ex: 90")
         
         st.divider()
         c1, c2 = st.columns(2)
@@ -538,13 +538,13 @@ def pagina_prevent():
             
             use_uacr = st.checkbox("Informar RAC (UACR)?", key="use_uacr")
             uacr_val_input = st.number_input("Relação Albumina/Creatinina Urinária (RAC) (mg/g)", 
-                                       min_value=0.0, max_value=5000.0, value=10.0, step=0.1, format="%.1f",
-                                       disabled=not use_uacr, key="uacr_val")
+                                       min_value=0.0, max_value=5000.0, value=None, step=0.1, format="%.1f",
+                                       disabled=not use_uacr, key="uacr_val", placeholder="Ex: 10.0")
 
             use_hba1c = st.checkbox("Informar Hemoglobina Glicada (HbA1c)?", key="use_hba1c")
             hba1c_val_input = st.number_input("Hemoglobina Glicada (HbA1c) (%)", 
-                                        min_value=3.0, max_value=20.0, value=5.7, step=0.1, format="%.1f",
-                                        disabled=not use_hba1c, key="hba1c_val")
+                                        min_value=3.0, max_value=20.0, value=None, step=0.1, format="%.1f",
+                                        disabled=not use_hba1c, key="hba1c_val", placeholder="Ex: 5.7")
         
         # --- REMOVIDO O submit_button ---
 
@@ -553,85 +553,94 @@ def pagina_prevent():
     with col2:
         st.subheader("Resultados do Risco em 10 Anos")
 
-        sex_numeric = 1 if sexo_str == "Feminino" else 0
-        dm_numeric = 1 if dm_bool else 0
-        smoking_numeric = 1 if smoking_bool else 0
-        bptreat_numeric = 1 if bptreat_bool else 0
-        statin_numeric = 1 if statin_bool else 0
-
-        # --- LÓGICA DE SELEÇÃO DO MODELO (CORRIGIDA) ---
-        uacr_fornecido = use_uacr
-        hba1c_fornecido = use_hba1c
+        # --- NOVA VERIFICAÇÃO DE CAMPOS OBRIGATÓRIOS ---
+        required_fields = [age, bmi, tc, hdl, sbp, egfr]
         
-        uacr_a_passar = uacr_val_input if uacr_fornecido else None
-        hba1c_a_passar = hba1c_val_input if hba1c_fornecido else None
+        if all(v is not None for v in required_fields):
+            # Se todos os campos estiverem preenchidos, rode o cálculo
+            sex_numeric = 1 if sexo_str == "Feminino" else 0
+            dm_numeric = 1 if dm_bool else 0
+            smoking_numeric = 1 if smoking_bool else 0
+            bptreat_numeric = 1 if bptreat_bool else 0
+            statin_numeric = 1 if statin_bool else 0
 
-        logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = np.nan, np.nan, np.nan
+            uacr_fornecido = use_uacr
+            hba1c_fornecido = use_hba1c
+            
+            uacr_a_passar = uacr_val_input if uacr_fornecido else None
+            hba1c_a_passar = hba1c_val_input if hba1c_fornecido else None
 
-        if not uacr_fornecido and not hba1c_fornecido:
-            modelo_utilizado = "Modelo 'Base' utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(
-                sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, 
-                smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, 
-                statin=statin_numeric
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = np.nan, np.nan, np.nan
+
+            if not uacr_fornecido and not hba1c_fornecido:
+                modelo_utilizado = "Modelo 'Base' utilizado."
+                logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(
+                    sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, 
+                    smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, 
+                    statin=statin_numeric
+                )
+            
+            elif uacr_fornecido and not hba1c_fornecido:
+                modelo_utilizado = "Modelo 'Base + RAC (UACR)' utilizado."
+                logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(
+                    sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, 
+                    smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, 
+                    statin=statin_numeric, uacr=uacr_a_passar
+                )
+
+            elif not uacr_fornecido and hba1c_fornecido:
+                modelo_utilizado = "Modelo 'Base + HbA1c' utilizado."
+                logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(
+                    sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, 
+                    smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, 
+                    statin=statin_numeric, hba1c=hba1c_a_passar
+                )
+            
+            else: # (uacr_fornecido AND hba1c_fornecido)
+                modelo_utilizado = "Modelo 'Full' (RAC + HbA1c) utilizado."
+                logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(
+                    sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, 
+                    smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, 
+                    statin=statin_numeric, uacr=uacr_a_passar, hba1c=hba1c_a_passar
+                )
+
+            risco_dcv_total, risco_ascvd, risco_hf = calcular_riscos_finais(
+                logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF,
+                age, tc, hdl, statin_numeric, bmi
             )
-        
-        elif uacr_fornecido and not hba1c_fornecido:
-            modelo_utilizado = "Modelo 'Base + RAC (UACR)' utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(
-                sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, 
-                smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, 
-                statin=statin_numeric, uacr=uacr_a_passar
-            )
+            
+            def formatar_risco(risco):
+                if risco is None or math.isnan(risco):
+                    return "N/A"
+                return f"{risco:.1f}%"
 
-        elif not uacr_fornecido and hba1c_fornecido:
-            modelo_utilizado = "Modelo 'Base + HbA1c' utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(
-                sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, 
-                smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, 
-                statin=statin_numeric, hba1c=hba1c_a_passar
-            )
-        
-        else: # (uacr_fornecido AND hba1c_fornecido)
-            modelo_utilizado = "Modelo 'Full' (RAC + HbA1c) utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(
-                sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, 
-                smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, 
-                statin=statin_numeric, uacr=uacr_a_passar, hba1c=hba1c_a_passar
-            )
+            st.metric("Risco de DCV Total", formatar_risco(risco_dcv_total))
+            st.metric("Risco de ASCVD", formatar_risco(risco_ascvd))
+            st.metric("Risco de Insuficiência Cardíaca", formatar_risco(risco_hf))
+            st.caption(modelo_utilizado)
+            
+            if math.isnan(risco_dcv_total) or math.isnan(risco_hf):
+                st.warning("Um ou mais riscos são 'N/A' devido a dados de entrada ausentes ou fora do intervalo (ex: Colesterol/Estatinas são necessários para DCV/ASCVD; IMC é necessário para IC).")
 
-        risco_dcv_total, risco_ascvd, risco_hf = calcular_riscos_finais(
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF,
-            age, tc, hdl, statin_numeric, bmi
-        )
-        
-        def formatar_risco(risco):
-            if risco is None or math.isnan(risco):
-                return "N/A"
-            return f"{risco:.1f}%"
+            st.divider()
 
-        st.metric("Risco de DCV Total", formatar_risco(risco_dcv_total))
-        st.metric("Risco de ASCVD", formatar_risco(risco_ascvd))
-        st.metric("Risco de Insuficiência Cardíaca", formatar_risco(risco_hf))
-        st.caption(modelo_utilizado)
-        
-        if math.isnan(risco_dcv_total) or math.isnan(risco_hf):
-            st.warning("Um ou mais riscos são 'N/A' devido a dados de entrada ausentes ou fora do intervalo (ex: Colesterol/Estatinas são necessários para DCV/ASCVD; IMC é necessário para IC).")
-
-        st.divider()
-
-        st.markdown("#### Interpretação do Risco (DCV Total)")
-        if risco_dcv_total is not None and not math.isnan(risco_dcv_total):
-            if risco_dcv_total < 5:
-                st.success("Risco Baixo: < 5%")
-            elif risco_dcv_total < 7.5:
-                st.info("Risco Limítrofe: 5% a 7.4%")
-            elif risco_dcv_total < 20:
-                st.warning("Risco Intermediário: 7.5% a 19.9%")
+            st.markdown("#### Interpretação do Risco (DCV Total)")
+            if risco_dcv_total is not None and not math.isnan(risco_dcv_total):
+                if risco_dcv_total < 5:
+                    st.success("Risco Baixo: < 5%")
+                elif risco_dcv_total < 7.5:
+                    st.info("Risco Limítrofe: 5% a 7.4%")
+                elif risco_dcv_total < 20:
+                    st.warning("Risco Intermediário: 7.5% a 19.9%")
+                else:
+                    st.error("Risco Alto: ≥ 20%")
             else:
-                st.error("Risco Alto: ≥ 20%")
+                st.info("Interpretação indisponível.")
+        
         else:
-            st.info("Interpretação indisponível.")
+            # Se os campos não estiverem preenchidos, mostre esta mensagem
+            st.info("Por favor, preencha todos os parâmetros obrigatórios para calcular o risco.")
+
 
 # --- FIM: SEÇÃO DA CALCULADORA PREVENT ---
 
