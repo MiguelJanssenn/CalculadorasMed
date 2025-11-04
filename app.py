@@ -523,8 +523,7 @@ def exibir_interpretacao_mmrc(score):
 def pagina_dados_paciente():
     """Página de entrada de dados. Escreve em st.session_state."""
     st.title("Prontuário do Paciente")
-    st.markdown("Insira os dados do paciente abaixo. Os resultados serão calculados nas páginas de especialidade.")
-    st.info("💡 **Dica:** Após preencher os dados, clique no botão 'Calcular' no final da página para confirmar e visualizar um resumo dos dados inseridos.")
+    st.markdown("Insira os dados do paciente abaixo. Os resultados serão calculados automaticamente nas páginas de especialidade.")
 
     # --- CORREÇÃO DO BUG DE PERSISTÊNCIA ---
     # Todos os widgets usam o parâmetro 'key' para vincular automaticamente ao st.session_state
@@ -601,76 +600,6 @@ def pagina_dados_paciente():
         st.slider("6. Confiante para sair de casa?", 0, 5, key="cat_6")
         st.slider("7. Durmo profundamente?", 0, 5, key="cat_7")
         st.slider("8. Tenho muita energia?", 0, 5, key="cat_8")
-    
-    # --- BOTÃO CALCULAR E RESUMO ---
-    st.divider()
-    st.subheader("Confirmar Dados")
-    
-    col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
-    with col_btn2:
-        if st.button("🧮 Calcular", type="primary", use_container_width=True):
-            st.session_state["dados_calculados"] = True
-            st.success("✅ Dados salvos com sucesso!")
-            st.balloons()
-    
-    # Mostrar resumo dos dados se foram calculados
-    if st.session_state.get("dados_calculados", False):
-        st.divider()
-        st.subheader("📊 Resumo dos Dados Inseridos")
-        
-        with st.expander("Ver Dados Salvos", expanded=True):
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.markdown("##### Dados Demográficos")
-                if st.session_state.get("sex"):
-                    st.write(f"**Sexo:** {st.session_state.sex}")
-                if st.session_state.get("age"):
-                    st.write(f"**Idade:** {st.session_state.age} anos")
-                if st.session_state.get("weight"):
-                    st.write(f"**Peso:** {st.session_state.weight} kg")
-                if st.session_state.get("height_cm"):
-                    st.write(f"**Altura:** {st.session_state.height_cm} cm")
-                    # Calcular e mostrar IMC
-                    if st.session_state.get("weight"):
-                        imc = calcular_imc(st.session_state.weight, st.session_state.height_cm)
-                        if not math.isnan(imc):
-                            st.write(f"**IMC:** {imc:.1f} kg/m²")
-            
-            with col2:
-                st.markdown("##### Dados Laboratoriais")
-                if st.session_state.get("creatinine"):
-                    st.write(f"**Creatinina:** {st.session_state.creatinine} mg/dL")
-                if st.session_state.get("tc"):
-                    st.write(f"**Col. Total:** {st.session_state.tc} mg/dL")
-                if st.session_state.get("hdl"):
-                    st.write(f"**HDL:** {st.session_state.hdl} mg/dL")
-                if st.session_state.get("bilirubin"):
-                    st.write(f"**Bilirrubina:** {st.session_state.bilirubin} mg/dL")
-                if st.session_state.get("albumin"):
-                    st.write(f"**Albumina:** {st.session_state.albumin} g/dL")
-            
-            with col3:
-                st.markdown("##### Histórico Clínico")
-                comorbidades = []
-                if st.session_state.get("dm"):
-                    comorbidades.append("Diabetes Mellitus")
-                if st.session_state.get("smoking"):
-                    comorbidades.append("Fumante")
-                if st.session_state.get("bptreat"):
-                    comorbidades.append("Uso de Anti-hipertensivo")
-                if st.session_state.get("statin"):
-                    comorbidades.append("Uso de Estatina")
-                if st.session_state.get("dialise"):
-                    comorbidades.append("Em Diálise")
-                
-                if comorbidades:
-                    for comorb in comorbidades:
-                        st.write(f"✓ {comorb}")
-                else:
-                    st.write("Nenhuma comorbidade registrada")
-        
-        st.info("💡 **Próximo passo:** Navegue para as páginas de especialidade no menu lateral para visualizar os scores calculados.")
         
 def pagina_cardiologia():
     """Página de resultados de Cardiologia. Apenas LÊ de st.session_state."""
@@ -712,20 +641,15 @@ def pagina_cardiologia():
         logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = np.nan, np.nan, np.nan
         modelo_utilizado = ""
 
-        # Preparar dados filtrados para cada modelo
-        base_data = {k: v for k, v in prevent_data.items() if k not in ['uacr', 'hba1c']}
-        uacr_data = {k: v for k, v in prevent_data.items() if k != 'hba1c'}
-        hba1c_data = {k: v for k, v in prevent_data.items() if k != 'uacr'}
-
         if not uacr_fornecido and not hba1c_fornecido:
             modelo_utilizado = "Modelo 'Base' utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**base_data)
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**prevent_data)
         elif uacr_fornecido and not hba1c_fornecido:
             modelo_utilizado = "Modelo 'Base + RAC (UACR)' utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**uacr_data)
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**prevent_data)
         elif not uacr_fornecido and hba1c_fornecido:
             modelo_utilizado = "Modelo 'Base + HbA1c' utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**hba1c_data)
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**prevent_data)
         else:
             modelo_utilizado = "Modelo 'Full' (RAC + HbA1c) utilizado."
             logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(**prevent_data)
@@ -964,12 +888,9 @@ def pagina_resumo():
             
             uacr_fornecido = prevent_data["uacr"] is not None
             hba1c_fornecido = prevent_data["hba1c"] is not None
-            base_data = {k: v for k, v in prevent_data.items() if k not in ['uacr', 'hba1c']}
-            uacr_data = {k: v for k, v in prevent_data.items() if k != 'hba1c'}
-            hba1c_data = {k: v for k, v in prevent_data.items() if k != 'uacr'}
-            if not uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**base_data)
-            elif uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**uacr_data)
-            elif not uacr_fornecido and hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**hba1c_data)
+            if not uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**prevent_data)
+            elif uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**prevent_data)
+            elif not uacr_fornecido and hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**prevent_data)
             else: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(**prevent_data)
             risco_dcv_total, risco_ascvd, risco_hf = calcular_riscos_finais(logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF, prevent_data['age'], prevent_data['tc'], prevent_data['hdl'], prevent_data['statin'], prevent_data['bmi'])
             
@@ -1066,54 +987,53 @@ def pagina_resumo():
 
 def initialize_session_state():
     """Define todos os valores possíveis no state para evitar erros na primeira execução."""
-    params = {
-        # Dados demográficos e vitais - iniciando em branco
-        "sex": "Feminino", 
-        "age": None, 
-        "weight": None, 
-        "height_cm": None,
-        
-        # Dados laboratoriais - iniciando em branco
-        "creatinine": None,
-        "bilirubin": None,
-        "albumin": None,
-        "sodium": None,
-        "inr": None,
-        "platelets": None,
-        "ast": None,
-        "alt": None,
-        
-        # Dados metabólicos e de risco - iniciando em branco
-        "tc": None,
-        "hdl": None,
-        "sbp": None,
-        "glucose_fasting": None,
-        "insulin_fasting": None,
-        "uacr_val": None,
-        "hba1c_val": None,
-        
-        # Histórico clínico (booleanos)
-        "dm": False, 
-        "smoking": False, 
-        "bptreat": False, 
-        "statin": False,
-        "dialise": False,
-        
-        # Sintomas (seleção)
-        "ascites": "Ausente", 
-        "encephalopathy": "Ausente",
-        "mmrc_score": "Grau 0: Dispneia apenas com exercício intenso",
-        
-        # Questionário CAT
-        "cat_1": 0, "cat_2": 0, "cat_3": 0, "cat_4": 0, 
-        "cat_5": 0, "cat_6": 0, "cat_7": 0, "cat_8": 0,
-        
-        # Flag para indicar se os dados foram calculados
-        "dados_calculados": False
-    }
-    for key, default_value in params.items():
-        if key not in st.session_state:
-            st.session_state[key] = default_value
+    if 'initialized' not in st.session_state:
+        st.session_state.initialized = True
+        params = {
+            # Dados demográficos e vitais - iniciando em branco
+            "sex": "Feminino",
+            "age": None,
+            "weight": None,
+            "height_cm": None,
+
+            # Dados laboratoriais - iniciando em branco
+            "creatinine": None,
+            "bilirubin": None,
+            "albumin": None,
+            "sodium": None,
+            "inr": None,
+            "platelets": None,
+            "ast": None,
+            "alt": None,
+
+            # Dados metabólicos e de risco - iniciando em branco
+            "tc": None,
+            "hdl": None,
+            "sbp": None,
+            "glucose_fasting": None,
+            "insulin_fasting": None,
+            "uacr_val": None,
+            "hba1c_val": None,
+
+            # Histórico clínico (booleanos)
+            "dm": False,
+            "smoking": False,
+            "bptreat": False,
+            "statin": False,
+            "dialise": False,
+
+            # Sintomas (seleção)
+            "ascites": "Ausente",
+            "encephalopathy": "Ausente",
+            "mmrc_score": "Grau 0: Dispneia apenas com exercício intenso",
+
+            # Questionário CAT
+            "cat_1": 0, "cat_2": 0, "cat_3": 0, "cat_4": 0,
+            "cat_5": 0, "cat_6": 0, "cat_7": 0, "cat_8": 0
+        }
+        for key, default_value in params.items():
+            if key not in st.session_state:
+                st.session_state[key] = default_value
 
 def main():
     """Função principal que desenha o app."""
