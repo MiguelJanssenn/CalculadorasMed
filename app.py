@@ -408,60 +408,67 @@ def pagina_dados_paciente():
     st.markdown("Insira os dados do paciente abaixo. Os resultados serão calculados automaticamente nas páginas de especialidade.")
 
     # --- CORREÇÃO DO BUG DE PERSISTÊNCIA ---
-    # Cada widget agora lê seu valor do st.session_state, garantindo a persistência
+    # Cada widget usa apenas o parâmetro 'key' para vincular automaticamente ao st.session_state
+    # Para manter compatibilidade com o resto do código que espera strings, usamos callbacks
     
     st.subheader("Dados Demográficos e Vitais")
     col1, col2 = st.columns(2)
     with col1:
-        st.radio("Sexo Biológico", ["Feminino", "Masculino"], horizontal=True, key="sex", index=("Feminino", "Masculino").index(st.session_state.sex))
-        st.number_input("Idade (anos)", min_value=18, max_value=120, value=st.session_state.age, step=1, key="age", placeholder="Ex: 55")
+        # Radio retorna o valor selecionado (string), não o índice
+        sex_options = ["Feminino", "Masculino"]
+        default_index = sex_options.index(st.session_state.sex) if st.session_state.sex in sex_options else 0
+        st.session_state.sex = st.radio("Sexo Biológico", sex_options, index=default_index, horizontal=True)
+        
+        st.number_input("Idade (anos)", min_value=18, max_value=120, step=1, key="age", placeholder="Ex: 55")
     with col2:
-        st.number_input("Peso (kg)", min_value=30.0, max_value=300.0, value=st.session_state.weight, step=0.1, format="%.1f", key="weight", placeholder="Ex: 70.0")
-        st.number_input("Altura (cm)", min_value=100.0, max_value=250.0, value=st.session_state.height_cm, step=0.1, format="%.1f", key="height_cm", placeholder="Ex: 170.0")
+        st.number_input("Peso (kg)", min_value=30.0, max_value=300.0, step=0.1, format="%.1f", key="weight", placeholder="Ex: 70.0")
+        st.number_input("Altura (cm)", min_value=100.0, max_value=250.0, step=0.1, format="%.1f", key="height_cm", placeholder="Ex: 170.0")
 
     st.subheader("Dados Laboratoriais Unificados")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, value=st.session_state.creatinine, step=0.1, format="%.1f", key="creatinine", placeholder="Ex: 1.0")
-        st.number_input("Bilirrubina Total (mg/dL)", min_value=0.1, max_value=50.0, value=st.session_state.bilirubin, step=0.1, format="%.1f", key="bilirubin", placeholder="Ex: 1.2")
-        st.number_input("Albumina Sérica (g/dL)", min_value=1.0, max_value=6.0, value=st.session_state.albumin, step=0.1, format="%.1f", key="albumin", placeholder="Ex: 4.0")
+        st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, step=0.1, format="%.1f", key="creatinine", placeholder="Ex: 1.0")
+        st.number_input("Bilirrubina Total (mg/dL)", min_value=0.1, max_value=50.0, step=0.1, format="%.1f", key="bilirubin", placeholder="Ex: 1.2")
+        st.number_input("Albumina Sérica (g/dL)", min_value=1.0, max_value=6.0, step=0.1, format="%.1f", key="albumin", placeholder="Ex: 4.0")
     with col2:
-        st.number_input("Sódio Sérico (mEq/L)", min_value=100, max_value=180, value=st.session_state.sodium, step=1, key="sodium", placeholder="Ex: 140")
-        st.number_input("INR", min_value=0.5, max_value=10.0, value=st.session_state.inr, step=0.1, format="%.1f", key="inr", placeholder="Ex: 1.1")
-        st.number_input("Plaquetas (x10³/µL)", min_value=10, max_value=1000, value=st.session_state.platelets, step=1, key="platelets", placeholder="Ex: 250")
+        st.number_input("Sódio Sérico (mEq/L)", min_value=100, max_value=180, step=1, key="sodium", placeholder="Ex: 140")
+        st.number_input("INR", min_value=0.5, max_value=10.0, step=0.1, format="%.1f", key="inr", placeholder="Ex: 1.1")
+        st.number_input("Plaquetas (x10³/µL)", min_value=10, max_value=1000, step=1, key="platelets", placeholder="Ex: 250")
     with col3:
-        st.number_input("AST (TGO) (U/L)", min_value=1, max_value=1000, value=st.session_state.ast, step=1, key="ast", placeholder="Ex: 25")
-        st.number_input("ALT (TGP) (U/L)", min_value=1, max_value=1000, value=st.session_state.alt, step=1, key="alt", placeholder="Ex: 25")
+        st.number_input("AST (TGO) (U/L)", min_value=1, max_value=1000, step=1, key="ast", placeholder="Ex: 25")
+        st.number_input("ALT (TGP) (U/L)", min_value=1, max_value=1000, step=1, key="alt", placeholder="Ex: 25")
 
     st.subheader("Dados Metabólicos e de Risco")
     col1, col2 = st.columns(2)
     with col1:
-        st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, value=st.session_state.tc, step=1, key="tc", placeholder="Ex: 200")
-        st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, value=st.session_state.hdl, step=1, key="hdl", placeholder="Ex: 50")
-        st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, value=st.session_state.sbp, step=1, key="sbp", placeholder="Ex: 120")
+        st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, step=1, key="tc", placeholder="Ex: 200")
+        st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, step=1, key="hdl", placeholder="Ex: 50")
+        st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, step=1, key="sbp", placeholder="Ex: 120")
     with col2:
-        st.number_input("Glicose de Jejum (mg/dL)", min_value=40, max_value=500, value=st.session_state.glucose_fasting, step=1, key="glucose_fasting", placeholder="Ex: 90")
-        st.number_input("Insulina de Jejum (µU/mL)", min_value=1.0, max_value=300.0, value=st.session_state.insulin_fasting, step=0.1, format="%.1f", key="insulin_fasting", placeholder="Ex: 8.0")
-        st.number_input("Relação Albumina/Creatinina Urinária (RAC) (mg/g)", min_value=0.0, max_value=5000.0, value=st.session_state.uacr_val, step=0.1, format="%.1f", key="uacr_val", placeholder="Opcional: Ex: 10.0")
-        st.number_input("Hemoglobina Glicada (HbA1c) (%)", min_value=3.0, max_value=20.0, value=st.session_state.hba1c_val, step=0.1, format="%.1f", key="hba1c_val", placeholder="Opcional: Ex: 5.7")
+        st.number_input("Glicose de Jejum (mg/dL)", min_value=40, max_value=500, step=1, key="glucose_fasting", placeholder="Ex: 90")
+        st.number_input("Insulina de Jejum (µU/mL)", min_value=1.0, max_value=300.0, step=0.1, format="%.1f", key="insulin_fasting", placeholder="Ex: 8.0")
+        st.number_input("Relação Albumina/Creatinina Urinária (RAC) (mg/g)", min_value=0.0, max_value=5000.0, step=0.1, format="%.1f", key="uacr_val", placeholder="Opcional: Ex: 10.0")
+        st.number_input("Hemoglobina Glicada (HbA1c) (%)", min_value=3.0, max_value=20.0, step=0.1, format="%.1f", key="hba1c_val", placeholder="Opcional: Ex: 5.7")
 
     st.subheader("Histórico Clínico e Questionários")
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown("**Comorbidades e Hábitos**")
-        st.checkbox("Diabetes Mellitus?", value=st.session_state.dm, key="dm")
-        st.checkbox("Fumante atual?", value=st.session_state.smoking, key="smoking")
-        st.checkbox("Em uso de anti-hipertensivo?", value=st.session_state.bptreat, key="bptreat")
-        st.checkbox("Em uso de estatina?", value=st.session_state.statin, key="statin")
-        st.checkbox("Em diálise (2x na última semana)?", value=st.session_state.dialise, key="dialise")
+        st.checkbox("Diabetes Mellitus?", key="dm")
+        st.checkbox("Fumante atual?", key="smoking")
+        st.checkbox("Em uso de anti-hipertensivo?", key="bptreat")
+        st.checkbox("Em uso de estatina?", key="statin")
+        st.checkbox("Em diálise (2x na última semana)?", key="dialise")
     
     with col2:
         st.markdown("**Sintomas (Gastro/Pneumo)**")
         ascites_options = ["Ausente", "Leve", "Moderada/Grave"]
-        st.selectbox("Ascite (Child-Pugh)", ascites_options, key="ascites", index=ascites_options.index(st.session_state.ascites))
+        default_ascites_index = ascites_options.index(st.session_state.ascites) if st.session_state.ascites in ascites_options else 0
+        st.session_state.ascites = st.selectbox("Ascite (Child-Pugh)", ascites_options, index=default_ascites_index)
         
         enceph_options = ["Ausente", "Grau 1-2", "Grau 3-4"]
-        st.selectbox("Encefalopatia (Child-Pugh)", enceph_options, key="encephalopathy", index=enceph_options.index(st.session_state.encephalopathy))
+        default_enceph_index = enceph_options.index(st.session_state.encephalopathy) if st.session_state.encephalopathy in enceph_options else 0
+        st.session_state.encephalopathy = st.selectbox("Encefalopatia (Child-Pugh)", enceph_options, index=default_enceph_index)
         
         mmrc_options = [
             "Grau 0: Dispneia apenas com exercício intenso",
@@ -470,19 +477,20 @@ def pagina_dados_paciente():
             "Grau 3: Para para respirar após ~100m",
             "Grau 4: Tanta dispneia que não sai de casa"
         ]
-        st.selectbox("Dispneia (mMRC)", mmrc_options, key="mmrc_score", index=mmrc_options.index(st.session_state.mmrc_score))
+        default_mmrc_index = mmrc_options.index(st.session_state.mmrc_score) if st.session_state.mmrc_score in mmrc_options else 0
+        st.session_state.mmrc_score = st.selectbox("Dispneia (mMRC)", mmrc_options, index=default_mmrc_index)
 
     with col3:
         st.markdown("**Questionário CAT (DPOC)**")
         st.caption("Responda de 0 (Nunca) a 5 (Sempre):")
-        st.slider("1. Tusso muito?", 0, 5, value=st.session_state.cat_1, key="cat_1")
-        st.slider("2. Tenho muito catarro?", 0, 5, value=st.session_state.cat_2, key="cat_2")
-        st.slider("3. Sinto o peito apertado?", 0, 5, value=st.session_state.cat_3, key="cat_3")
-        st.slider("4. Sinto falta de ar ao subir escadas?", 0, 5, value=st.session_state.cat_4, key="cat_4")
-        st.slider("5. Limitado(a) em casa?", 0, 5, value=st.session_state.cat_5, key="cat_5")
-        st.slider("6. Confiante para sair de casa?", 0, 5, value=st.session_state.cat_6, key="cat_6")
-        st.slider("7. Durmo profundamente?", 0, 5, value=st.session_state.cat_7, key="cat_7")
-        st.slider("8. Tenho muita energia?", 0, 5, value=st.session_state.cat_8, key="cat_8")
+        st.slider("1. Tusso muito?", 0, 5, key="cat_1")
+        st.slider("2. Tenho muito catarro?", 0, 5, key="cat_2")
+        st.slider("3. Sinto o peito apertado?", 0, 5, key="cat_3")
+        st.slider("4. Sinto falta de ar ao subir escadas?", 0, 5, key="cat_4")
+        st.slider("5. Limitado(a) em casa?", 0, 5, key="cat_5")
+        st.slider("6. Confiante para sair de casa?", 0, 5, key="cat_6")
+        st.slider("7. Durmo profundamente?", 0, 5, key="cat_7")
+        st.slider("8. Tenho muita energia?", 0, 5, key="cat_8")
         
 def pagina_cardiologia():
     """Página de resultados de Cardiologia. Apenas LÊ de st.session_state."""
@@ -871,17 +879,46 @@ def pagina_resumo():
 def initialize_session_state():
     """Define todos os valores possíveis no state para evitar erros na primeira execução."""
     params = {
-        "sex": "Feminino", "age": None, "tc": None, "hdl": None, 
-        "sbp": None, "dm": False, "smoking": False, 
-        "bptreat": False, "statin": False, "uacr_val": None, "hba1c_val": None, 
-        "bilirubin": None, "inr": None, "sodium": None, 
-        "albumin": None, "dialise": False, "ascites": "Ausente", 
-        "encephalopathy": "Ausente", "ast": None, "alt": None, "platelets": None,
-        "weight": None, "height_cm": None, "glucose_fasting": None, 
-        "insulin_fasting": None, "creatinine": None,
-        "cat_1": 0, "cat_2": 0, "cat_3": 0, "cat_4": 0, "cat_5": 0, "cat_6": 0, 
-        "cat_7": 0, "cat_8": 0,
-        "mmrc_score": "Grau 0: Dispneia apenas com exercício intenso"
+        # Dados demográficos e vitais - usando valores padrão típicos
+        "sex": "Feminino", 
+        "age": 55, 
+        "weight": 70.0, 
+        "height_cm": 170.0,
+        
+        # Dados laboratoriais - valores padrão
+        "creatinine": 1.0,
+        "bilirubin": 1.0,
+        "albumin": 4.0,
+        "sodium": 140,
+        "inr": 1.0,
+        "platelets": 250,
+        "ast": 25,
+        "alt": 25,
+        
+        # Dados metabólicos e de risco
+        "tc": 200,
+        "hdl": 50,
+        "sbp": 120,
+        "glucose_fasting": 90,
+        "insulin_fasting": 8.0,
+        "uacr_val": 10.0,
+        "hba1c_val": 5.5,
+        
+        # Histórico clínico (booleanos)
+        "dm": False, 
+        "smoking": False, 
+        "bptreat": False, 
+        "statin": False,
+        "dialise": False,
+        
+        # Sintomas (seleção)
+        "ascites": "Ausente", 
+        "encephalopathy": "Ausente",
+        "mmrc_score": "Grau 0: Dispneia apenas com exercício intenso",
+        
+        # Questionário CAT
+        "cat_1": 0, "cat_2": 0, "cat_3": 0, "cat_4": 0, 
+        "cat_5": 0, "cat_6": 0, "cat_7": 0, "cat_8": 0
     }
     for key, default_value in params.items():
         if key not in st.session_state:
