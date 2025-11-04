@@ -306,7 +306,125 @@ def exibir_interpretacao_fib4(score, age):
     
     if age is not None and age > 65:
         low_cutoff = 2.0
-        
+    
+    # Criar barra de estratificação visual
+    st.markdown("##### Estratificação de Risco")
+    
+    # Constante para valor máximo de visualização
+    MAX_DISPLAY_SCORE = 5.0
+    
+    # Determinar a posição do score na barra (0-100%)
+    score_position = min(score / MAX_DISPLAY_SCORE * 100, 100)
+    # Garantir que o marcador fique dentro dos limites visuais
+    score_position_safe = max(2, min(score_position, 98))
+    
+    # Criar HTML para a barra colorida
+    bar_html = f"""
+    <style>
+    .fib4-bar-container {{
+        width: 100%;
+        height: 40px;
+        position: relative;
+        border-radius: 5px;
+        overflow: hidden;
+        margin: 10px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }}
+    .fib4-bar {{
+        display: flex;
+        height: 100%;
+        width: 100%;
+    }}
+    .fib4-low {{
+        background: linear-gradient(90deg, #28a745 0%, #5cb85c 100%);
+        width: {low_cutoff / MAX_DISPLAY_SCORE * 100}%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+    }}
+    .fib4-intermediate {{
+        background: linear-gradient(90deg, #ffc107 0%, #ff9800 100%);
+        width: {(high_cutoff - low_cutoff) / MAX_DISPLAY_SCORE * 100}%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+    }}
+    .fib4-high {{
+        background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+        width: {(MAX_DISPLAY_SCORE - high_cutoff) / MAX_DISPLAY_SCORE * 100}%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+    }}
+    .fib4-marker {{
+        position: absolute;
+        top: 0;
+        left: {score_position_safe}%;
+        width: 3px;
+        height: 100%;
+        background-color: black;
+        z-index: 10;
+    }}
+    .fib4-marker::after {{
+        content: '▼';
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 16px;
+        color: black;
+    }}
+    .fib4-score-label {{
+        position: absolute;
+        top: -40px;
+        left: {score_position_safe}%;
+        transform: translateX(-50%);
+        background-color: black;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+        white-space: nowrap;
+    }}
+    .fib4-legend {{
+        display: flex;
+        justify-content: space-between;
+        margin-top: 5px;
+        font-size: 11px;
+        color: #666;
+    }}
+    </style>
+    <div class="fib4-bar-container">
+        <div class="fib4-score-label">{score:.2f}</div>
+        <div class="fib4-marker"></div>
+        <div class="fib4-bar">
+            <div class="fib4-low">Baixo Risco</div>
+            <div class="fib4-intermediate">Indeterminado</div>
+            <div class="fib4-high">Alto Risco</div>
+        </div>
+    </div>
+    <div class="fib4-legend">
+        <span>0</span>
+        <span>{low_cutoff}</span>
+        <span>{high_cutoff}</span>
+        <span>{MAX_DISPLAY_SCORE}+</span>
+    </div>
+    """
+    
+    st.markdown(bar_html, unsafe_allow_html=True)
+    st.markdown("")  # Espaçamento
+    
+    # Interpretação textual
     if score < low_cutoff:
         st.success(f"**Score {score:.2f} (< {low_cutoff}):** Baixo risco de fibrose avançada (VPN > 90%).")
     elif score > high_cutoff:
@@ -879,30 +997,30 @@ def pagina_resumo():
 def initialize_session_state():
     """Define todos os valores possíveis no state para evitar erros na primeira execução."""
     params = {
-        # Dados demográficos e vitais - usando valores padrão típicos
+        # Dados demográficos e vitais - iniciando em branco
         "sex": "Feminino", 
-        "age": 55, 
-        "weight": 70.0, 
-        "height_cm": 170.0,
+        "age": None, 
+        "weight": None, 
+        "height_cm": None,
         
-        # Dados laboratoriais - valores padrão
-        "creatinine": 1.0,
-        "bilirubin": 1.0,
-        "albumin": 4.0,
-        "sodium": 140,
-        "inr": 1.0,
-        "platelets": 250,
-        "ast": 25,
-        "alt": 25,
+        # Dados laboratoriais - iniciando em branco
+        "creatinine": None,
+        "bilirubin": None,
+        "albumin": None,
+        "sodium": None,
+        "inr": None,
+        "platelets": None,
+        "ast": None,
+        "alt": None,
         
-        # Dados metabólicos e de risco
-        "tc": 200,
-        "hdl": 50,
-        "sbp": 120,
-        "glucose_fasting": 90,
-        "insulin_fasting": 8.0,
-        "uacr_val": 10.0,
-        "hba1c_val": 5.5,
+        # Dados metabólicos e de risco - iniciando em branco
+        "tc": None,
+        "hdl": None,
+        "sbp": None,
+        "glucose_fasting": None,
+        "insulin_fasting": None,
+        "uacr_val": None,
+        "hba1c_val": None,
         
         # Histórico clínico (booleanos)
         "dm": False, 
@@ -936,13 +1054,13 @@ def main():
     st.sidebar.markdown("---")
     
     paginas = {
-        "Dados do Paciente": pagina_dados_paciente,
-        "Resumo Geral": pagina_resumo,
-        "Cardiologia": pagina_cardiologia,
-        "Gastroenterologia": pagina_gastroenterologia,
-        "Endocrinologia": pagina_endocrinologia,
-        "Pneumologia": pagina_pneumologia,
-        "Nefrologia": pagina_nefrologia,
+        "📋 Dados do Paciente": pagina_dados_paciente,
+        "📊 Resumo Geral": pagina_resumo,
+        "❤️ Cardiologia": pagina_cardiologia,
+        "🫀 Gastroenterologia": pagina_gastroenterologia,
+        "🩸 Endocrinologia": pagina_endocrinologia,
+        "🫁 Pneumologia": pagina_pneumologia,
+        "🩺 Nefrologia": pagina_nefrologia,
     }
     
     selecao = st.sidebar.radio("Navegação:", list(paginas.keys()), key="pagina_selecionada")
