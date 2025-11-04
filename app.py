@@ -18,6 +18,7 @@ def adjust_py(uacr):
 
 # --- FUNÇÕES DE CÁLCULO PREVENT ---
 def calcular_prevent_base_py(sex, age, tc, hdl, sbp, dm, smoking, bmi, egfr, bptreat, statin):
+    """ Porta da função 'pred_risk_base' do R """
     logor_10yr_CVD = logor_10yr_ASCVD = logor_10yr_HF = np.nan
     if sex == 1: # Feminino
         logor_10yr_CVD = -3.307728 + 0.7939329*(age - 55)/10 + 0.0305239*(mmol_conversion_py(tc - hdl) - 3.5) - 0.1606857*(mmol_conversion_py(hdl) - 1.3)/(0.3) - 0.2394003*(min(sbp, 110) - 110)/20 + 0.360078*(max(sbp, 110) - 130)/20 + 0.8667604*(dm) + 0.5360739*(smoking) + 0.6045917*(min(egfr, 60) - 60)/(-15) + 0.0433769*(max(egfr, 60) - 90)/(-15) + 0.3151672*(bptreat) - 0.1477655*(statin) - 0.0663612*(bptreat)*(max(sbp, 110) - 130)/20 + 0.1197879*(statin)*(mmol_conversion_py(tc - hdl) - 3.5) - 0.0819715*(age - 55)/10*(mmol_conversion_py(tc - hdl) - 3.5) + 0.0306769*(age - 55)/10*(mmol_conversion_py(hdl) - 1.3)/(0.3) - 0.0946348*(age - 55)/10*(max(sbp, 110) - 130)/20 - 0.27057*(age - 55)/10*(dm) - 0.078715*(age - 55)/10*(smoking) - 0.1637806*(age - 55)/10*(min(egfr, 60) - 60)/(-15)
@@ -120,12 +121,137 @@ def calcular_riscos_finais(logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF, age,
         prevent_10yr_HF = np.nan
     return prevent_10yr_CVD, prevent_10yr_ASCVD, prevent_10yr_HF
 
+# --- FUNÇÕES DE CÁLCULO GASTROENTEROLOGIA ---
+
+def calcular_meld_3_0(sex_str, bilirubin, inr, creatinine, sodium, albumin, dialise):
+    """ Calcula o score MELD 3.0 """
+    # Aplicar limites
+    bilirubin = max(1.0, min(bilirubin, 32.0))
+    inr = max(1.0, min(inr, 3.5))
+    creatinine = max(1.0, min(creatinine, 4.0))
+    sodium = max(125.0, min(sodium, 137.0))
+    albumin = max(1.5, min(albumin, 3.5))
+    
+    # Se fez diálise 2x+ nos últimos 7 dias OU Creatinina >= 4.0, a creatinina usada é 4.0
+    if dialise or creatinine >= 4.0:
+        creatinine = 4.0
+    
+    sex_female = 1.33 if sex_str == "Feminino" else 0
+    
+    # Fórmula MELD 3.0
+    score = (
+        1.33 * sex_female
+        + 4.56 * math.log(bilirubin)
+        + 0.82 * (137 - sodium)
+        - (0.24 * (137 - sodium) * math.log(bilirubin))
+        + 9.09 * math.log(inr)
+        + 11.14 * math.log(creatinine)
+        + 1.85 * (3.5 - albumin)
+        - (0.05 * (3.5 - albumin) * math.log(creatinine))
+        + 6.0
+    )
+    
+    score = math.floor(score) # Arredonda para baixo
+    return min(max(6, score), 40) # O score MELD é limitado entre 6 e 40
+
+def calcular_child_pugh(bilirubin, inr, albumin, ascites, encephalopathy):
+    """ Calcula o score Child-Pugh """
+    score = 0
+    
+    # Bilirrubina
+    if bilirubin < 2.0: score += 1
+    elif 2.0 <= bilirubin <= 3.0: score += 2
+    else: score += 3
+        
+    # INR
+    if inr < 1.7: score += 1
+    elif 1.7 <= inr <= 2.3: score += 2
+    else: score += 3
+    
+    # Albumina
+    if albumin > 3.5: score += 1
+    elif 2.8 <= albumin <= 3.5: score += 2
+    else: score += 3
+        
+    # Ascite
+    if ascites == "Ausente": score += 1
+    elif ascites == "Leve": score += 2
+    elif ascites == "Moderada/Grave": score += 3
+        
+    # Encefalopatia
+    if encephalopathy == "Ausente": score += 1
+    elif encephalopathy == "Grau 1-2": score += 2
+    elif encephalopathy == "Grau 3-4": score += 3
+        
+    return score
+
+def calcular_fib4(age, ast, alt, platelets):
+    """ Calcula o score FIB4 """
+    # Fórmula: (Idade * AST) / (Plaquetas * sqrt(ALT))
+    #
+    if alt <= 0 or platelets <= 0:
+        return np.nan
+    
+    # A fórmula usa plaquetas em 10^9/L. O input é em 10^3/µL, que é o mesmo que 10^9/L.
+    score = (age * ast) / (platelets * math.sqrt(alt))
+    return score
+
+# --- FUNÇÕES DE CÁLCULO ENDOCRINOLOGIA ---
+
+def calcular_imc(weight, height_cm):
+    """ Calcula o Índice de Massa Corporal (IMC) """
+    if height_cm == 0:
+        return np.nan
+    height_m = height_cm / 100
+    imc = weight / (height_m ** 2)
+    return imc
+
+def calcular_homa_ir(glucose_mg_dl, insulin):
+    """ Calcula o HOMA-IR """
+    # Fórmula padrão: (Glicose (mg/dL) * Insulina (µU/mL)) / 405
+    # Fórmula alternativa: (Glicose (mmol/L) * Insulina (µU/mL)) / 22.5
+    # Vamos usar mg/dL
+    score = (glucose_mg_dl * insulin) / 405
+    return score
+
+def calcular_homa_beta(glucose_mg_dl, insulin):
+    """ Calcula o HOMA-BETA """
+    # Fórmula padrão: (360 * Insulina (µU/mL)) / (Glicose (mg/dL) - 63)
+    # Fórmula alternativa: (20 * Insulina (µU/mL)) / (Glicose (mmol/L) - 3.5)
+    # Vamos usar mg/dL
+    if (glucose_mg_dl - 63) == 0:
+        return np.nan
+    score = (360 * insulin) / (glucose_mg_dl - 63)
+    return score
+
+# --- FUNÇÕES DE CÁLCULO NEFROLOGIA ---
+def calcular_egfr_ckd_epi(creatinine, age, sex_str):
+    """ Calcula eGFR usando a fórmula CKD-EPI 2021 """
+    
+    # Parâmetros da fórmula CKD-EPI 2021
+    kappa = 0.7 if sex_str == "Feminino" else 0.9
+    alpha = -0.241 if sex_str == "Feminino" else -0.302
+    sex_factor = 1.012 if sex_str == "Feminino" else 1.0
+    
+    # Fórmula
+    egfr = 142 * (min(creatinine / kappa, 1) ** alpha) * \
+                 (max(creatinine / kappa, 1) ** -1.200) * \
+                 (0.9938 ** age) * sex_factor
+                 
+    return egfr
+
+# --- FUNÇÕES UTILITÁRIAS DE FORMATAÇÃO E ESTRATIFICAÇÃO ---
 def formatar_risco(risco):
     if risco is None or math.isnan(risco):
         return "N/A"
     return f"{risco:.1f}%"
 
-def exibir_interpretacao(risco_dcv_total):
+def formatar_score(score, casas_decimais=1):
+    if score is None or math.isnan(score):
+        return "N/A"
+    return f"{score:.{casas_decimais}f}"
+
+def exibir_interpretacao_prevent(risco_dcv_total):
     st.markdown("#### Interpretação do Risco (DCV Total)")
     if risco_dcv_total is not None and not math.isnan(risco_dcv_total):
         if risco_dcv_total < 5:
@@ -139,69 +265,149 @@ def exibir_interpretacao(risco_dcv_total):
     else:
         st.info("Interpretação indisponível.")
 
-def rodar_calculo_prevent():
-    """
-    Função central que LÊ do st.session_state, ESCOLHE o modelo,
-    EXECUTA o cálculo e RETORNA os resultados.
-    """
-    # Define valores padrão se não estiverem no state (primeira execução)
-    # Isso é improvável por causa da inicialização, mas é uma boa prática.
-    sex_str = st.session_state.get('sex', "Feminino")
-    age = st.session_state.get('age')
-    bmi = st.session_state.get('bmi')
-    tc = st.session_state.get('tc')
-    hdl = st.session_state.get('hdl')
-    sbp = st.session_state.get('sbp')
-    egfr = st.session_state.get('egfr')
-    dm_bool = st.session_state.get('dm', False)
-    smoking_bool = st.session_state.get('smoking', False)
-    bptreat_bool = st.session_state.get('bptreat', False)
-    statin_bool = st.session_state.get('statin', False)
-    use_uacr = st.session_state.get('use_uacr', False)
-    uacr_val_input = st.session_state.get('uacr_val')
-    use_hba1c = st.session_state.get('use_hba1c', False)
-    hba1c_val_input = st.session_state.get('hba1c_val')
+def exibir_interpretacao_child_pugh(score):
+    st.markdown("#### Estratificação (Child-Pugh)")
+    if score is None or math.isnan(score):
+        st.info("Cálculo indisponível.")
+        return
 
-    # Verifica se os campos obrigatórios estão preenchidos
-    required_fields = [age, bmi, tc, hdl, sbp, egfr]
-    if not all(v is not None for v in required_fields):
-        return None, None, None, "Preencha os campos obrigatórios."
+    score = int(score)
+    if 5 <= score <= 6:
+        st.success(f"**Classe A (5-6 pontos):** Doença hepática compensada.")
+        st.markdown("* Mortalidade perioperatória: 10%\n* Sobrevida em 1 ano: 100%")
+    elif 7 <= score <= 9:
+        st.warning(f"**Classe B (7-9 pontos):** Doença hepática com comprometimento funcional significativo.")
+        st.markdown("* Mortalidade perioperatória: 30%\n* Sobrevida em 1 ano: 81%")
+    elif 10 <= score <= 15:
+        st.error(f"**Classe C (10-15 pontos):** Doença hepática descompensada.")
+        st.markdown("* Mortalidade perioperatória: 76%\n* Sobrevida em 1 ano: 45%")
 
-    # Se estiverem preenchidos, continue com o cálculo
-    sex_numeric = 1 if sex_str == "Feminino" else 0
-    dm_numeric = 1 if dm_bool else 0
-    smoking_numeric = 1 if smoking_bool else 0
-    bptreat_numeric = 1 if bptreat_bool else 0
-    statin_numeric = 1 if statin_bool else 0
+def exibir_interpretacao_meld(score):
+    st.markdown("#### Estratificação (Mortalidade em 90 dias)")
+    if score is None or math.isnan(score):
+        st.info("Cálculo indisponível.")
+        return
 
-    uacr_fornecido = use_uacr and uacr_val_input is not None
-    hba1c_fornecido = use_hba1c and hba1c_val_input is not None
+    score = int(score)
+    if score <= 9:
+        st.success(f"**Score {score} (≤ 9):** Mortalidade de 1.9% em 90 dias.")
+    elif 10 <= score <= 19:
+        st.info(f"**Score {score} (10-19):** Mortalidade de 6.0% em 90 dias.")
+    elif 20 <= score <= 29:
+        st.warning(f"**Score {score} (20-29):** Mortalidade de 19.6% em 90 dias.")
+    elif 30 <= score <= 39:
+        st.error(f"**Score {score} (30-39):** Mortalidade de 52.6% em 90 dias.")
+    else: # >= 40
+        st.error(f"**Score {score} (≥ 40):** Mortalidade de 71.3% em 90 dias.")
+
+def exibir_interpretacao_fib4(score, age):
+    st.markdown("#### Estratificação (Risco de Fibrose Avançada)")
+    if score is None or math.isnan(score):
+        st.info("Cálculo indisponível.")
+        return
     
-    uacr_a_passar = uacr_val_input if uacr_fornecido else None
-    hba1c_a_passar = hba1c_val_input if hba1c_fornecido else None
-
-    logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = np.nan, np.nan, np.nan
-    modelo_utilizado = ""
-
-    if not uacr_fornecido and not hba1c_fornecido:
-        modelo_utilizado = "Modelo 'Base' utilizado."
-        logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, statin=statin_numeric)
-    elif uacr_fornecido and not hba1c_fornecido:
-        modelo_utilizado = "Modelo 'Base + RAC (UACR)' utilizado."
-        logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, statin=statin_numeric, uacr=uacr_a_passar)
-    elif not uacr_fornecido and hba1c_fornecido:
-        modelo_utilizado = "Modelo 'Base + HbA1c' utilizado."
-        logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, statin=statin_numeric, hba1c=hba1c_a_passar)
-    else: # (uacr_fornecido AND hba1c_fornecido)
-        modelo_utilizado = "Modelo 'Full' (RAC + HbA1c) utilizado."
-        logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(sex=sex_numeric, age=age, tc=tc, hdl=hdl, sbp=sbp, dm=dm_numeric, smoking=smoking_numeric, bmi=bmi, egfr=egfr, bptreat=bptreat_numeric, statin=statin_numeric, uacr=uacr_a_passar, hba1c=hba1c_a_passar)
-
-    risco_dcv_total, risco_ascvd, risco_hf = calcular_riscos_finais(
-        logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF,
-        age, tc, hdl, statin_numeric, bmi
-    )
+    # Cutoffs padrão
+    low_cutoff = 1.45
+    high_cutoff = 3.25
     
-    return risco_dcv_total, risco_ascvd, risco_hf, modelo_utilizado
+    # Ajuste para idade
+    if age > 65:
+        low_cutoff = 2.0
+        
+    if score < low_cutoff:
+        st.success(f"**Score {score:.2f} (< {low_cutoff}):** Baixo risco de fibrose avançada.")
+        st.markdown("* Valor Preditivo Negativo (VPN) > 90% para fibrose avançada (F3-F4).")
+    elif score > high_cutoff:
+        st.error(f"**Score {score:.2f} (> {high_cutoff}):** Alto risco de fibrose avançada.")
+        st.markdown("* Valor Preditivo Positivo (VPP) > 65% para fibrose avançada (F3-F4).")
+    else:
+        st.warning(f"**Score {score:.2f} (Indeterminado):** Risco indeterminado. Considere avaliação adicional.")
+
+def exibir_interpretacao_imc(score):
+    st.markdown("#### Estratificação (OMS)")
+    if score is None or math.isnan(score):
+        st.info("Cálculo indisponível.")
+        return
+
+    if score < 18.5:
+        st.warning(f"**IMC {score:.1f}:** Abaixo do peso")
+    elif 18.5 <= score < 25:
+        st.success(f"**IMC {score:.1f}:** Peso normal")
+    elif 25 <= score < 30:
+        st.warning(f"**IMC {score:.1f}:** Sobrepeso")
+    elif 30 <= score < 35:
+        st.error(f"**IMC {score:.1f}:** Obesidade Grau I")
+    elif 35 <= score < 40:
+        st.error(f"**IMC {score:.1f}:** Obesidade Grau II")
+    else: # >= 40
+        st.error(f"**IMC {score:.1f}:** Obesidade Grau III (Mórbida)")
+
+def exibir_interpretacao_homa_ir(score):
+    st.markdown("#### Estratificação (HOMA-IR)")
+    if score is None or math.isnan(score):
+        st.info("Cálculo indisponível.")
+        return
+    
+    # O cutoff de 2 é comumente usado, mas varia.
+    if score < 2.0:
+        st.success(f"**HOMA-IR {score:.2f}:** Geralmente considerado normal.")
+    else:
+        st.warning(f"**HOMA-IR {score:.2f}:** Sugestivo de resistência à insulina (Cutoff comum > 2.0).")
+
+def exibir_interpretacao_egfr(score):
+    st.markdown("#### Estratificação (Estágios da Doença Renal Crônica)")
+    if score is None or math.isnan(score):
+        st.info("Cálculo indisponível.")
+        return
+        
+    score = round(score)
+    if score >= 90:
+        st.success(f"**eGFR {score}:** Estágio 1 - Normal ou aumentado (≥ 90 mL/min/1.73 m²)")
+    elif 60 <= score <= 89:
+        st.info(f"**eGFR {score}:** Estágio 2 - Levemente diminuído (60-89 mL/min/1.73 m²)")
+    elif 45 <= score <= 59:
+        st.warning(f"**eGFR {score}:** Estágio 3a - Leve a moderadamente diminuído (45-59 mL/min/1.73 m²)")
+    elif 30 <= score <= 44:
+        st.warning(f"**eGFR {score}:** Estágio 3b - Moderada a gravemente diminuído (30-44 mL/min/1.73 m²)")
+    elif 15 <= score <= 29:
+        st.error(f"**eGFR {score}:** Estágio 4 - Gravemente diminuído (15-29 mL/min/1.73 m²)")
+    else: # < 15
+        st.error(f"**eGFR {score}:** Estágio 5 - Falência renal (< 15 mL/min/1.73 m²)")
+        
+def exibir_interpretacao_cat(score):
+    st.markdown("#### Estratificação de Impacto (CAT)")
+    if score is None or math.isnan(score):
+        st.info("Cálculo indisponível.")
+        return
+    
+    score = int(score)
+    if score <= 10:
+        st.success(f"**Score {score} (0-10):** Baixo Impacto")
+    elif 11 <= score <= 20:
+        st.info(f"**Score {score} (11-20):** Médio Impacto")
+    elif 21 <= score <= 30:
+        st.warning(f"**Score {score} (21-30):** Alto Impacto")
+    else: # 31-40
+        st.error(f"**Score {score} (31-40):** Muito Alto Impacto")
+
+def exibir_interpretacao_mmrc(score):
+    st.markdown("#### Estratificação de Dispneia (mMRC)")
+    if score is None or math.isnan(score):
+        st.info("Cálculo indisponível.")
+        return
+
+    score = int(score)
+    if score == 0:
+        st.success(f"**Grau {score}:** Dispneia apenas com exercício intenso.")
+    elif score == 1:
+        st.info(f"**Grau {score}:** Dispneia ao andar apressado ou subir ladeira leve.")
+    elif score == 2:
+        st.warning(f"**Grau {score}:** Anda mais devagar que pessoas da mesma idade ou precisa parar para respirar.")
+    elif score == 3:
+        st.error(f"**Grau {score}:** Para para respirar após andar ~100m ou poucos minutos.")
+    elif score == 4:
+        st.error(f"**Grau {score}:** Tanta dispneia que não sai de casa ou sente ao se vestir.")
+
 
 # --- 2. FUNÇÕES DE PÁGINA (UI) ---
 # Estas funções definem a aparência de cada página.
@@ -212,13 +418,15 @@ def pagina_dados_paciente():
     st.markdown("Insira os dados do paciente abaixo. Os resultados serão calculados automaticamente nas páginas de especialidade.")
 
     st.subheader("Dados Demográficos e Vitais")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        # A 'key' é o nome da variável no st.session_state
         st.radio("Sexo Biológico", ["Feminino", "Masculino"], horizontal=True, key="sex")
-        st.number_input("Idade (anos)", min_value=18, max_value=100, value=None, step=1, key="age", placeholder="Ex: 55")
+        st.number_input("Idade (anos)", min_value=18, max_value=120, value=None, step=1, key="age", placeholder="Ex: 55")
     with col2:
-        st.number_input("Índice de Massa Corporal (IMC) (kg/m²)", min_value=15.0, max_value=60.0, value=None, step=0.1, format="%.1f", key="bmi", placeholder="Ex: 25.0")
+        st.number_input("Peso (kg)", min_value=30.0, max_value=300.0, value=None, step=0.1, format="%.1f", key="weight", placeholder="Ex: 70.0")
+        st.number_input("Altura (cm)", min_value=100.0, max_value=250.0, value=None, step=0.1, format="%.1f", key="height_cm", placeholder="Ex: 170.0")
+    with col3:
+        st.number_input("IMC (kg/m²)", min_value=15.0, max_value=60.0, value=None, step=0.1, format="%.1f", key="bmi", placeholder="Ex: 25.0")
         st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, value=None, step=1, key="sbp", placeholder="Ex: 120")
 
     st.subheader("Exames Laboratoriais")
@@ -228,108 +436,458 @@ def pagina_dados_paciente():
         with col1:
             st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, value=None, step=1, key="tc", placeholder="Ex: 200")
             st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, value=None, step=1, key="hdl", placeholder="Ex: 50")
-            st.number_input("Hemoglobina Glicada (HbA1c) (%)", min_value=3.0, max_value=20.0, value=None, step=0.1, format="%.1f", key="hba1c_val", placeholder="Ex: 5.7")
+            st.number_input("AST (TGO) (U/L)", min_value=1, max_value=1000, value=None, step=1, key="ast", placeholder="Ex: 25")
+            st.number_input("ALT (TGP) (U/L)", min_value=1, max_value=1000, value=None, step=1, key="alt", placeholder="Ex: 25")
         with col2:
-            st.number_input("Taxa de Filtração Glomerular (eGFR) (mL/min/1.73 m²)", min_value=10, max_value=150, value=None, step=1, key="egfr", placeholder="Ex: 90")
+            st.number_input("Taxa de Filtração Glomerular (eGFR) (mL/min/1.73 m²)", min_value=10, max_value=150, value=None, step=1, key="egfr_prevent", placeholder="Ex: 90")
             st.number_input("Relação Albumina/Creatinina Urinária (RAC) (mg/g)", min_value=0.0, max_value=5000.0, value=None, step=0.1, format="%.1f", key="uacr_val", placeholder="Ex: 10.0")
+            st.number_input("Plaquetas (x10³/µL ou x10⁹/L)", min_value=10, max_value=1000, value=None, step=1, key="platelets", placeholder="Ex: 250")
 
-    with st.expander("Gastroenterologia / Hepatologia (para MELD, Pugh)"):
+    with st.expander("Endocrinologia"):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.number_input("Glicose de Jejum (mg/dL)", min_value=40, max_value=500, value=None, step=1, key="glucose_fasting", placeholder="Ex: 90")
+        with col2:
+            st.number_input("Insulina de Jejum (µU/mL)", min_value=1.0, max_value=300.0, value=None, step=0.1, format="%.1f", key="insulin_fasting", placeholder="Ex: 8.0")
+
+    with st.expander("Gastroenterologia / Hepatologia"):
         col1, col2 = st.columns(2)
         with col1:
             st.number_input("Bilirrubina Total (mg/dL)", min_value=0.1, max_value=50.0, value=None, step=0.1, format="%.1f", key="bilirubin", placeholder="Ex: 1.2")
-            st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, value=None, step=0.1, format="%.1f", key="creatinine", placeholder="Ex: 1.0")
             st.number_input("INR", min_value=0.5, max_value=10.0, value=None, step=0.1, format="%.1f", key="inr", placeholder="Ex: 1.1")
-        with col2:
             st.number_input("Sódio Sérico (mEq/L)", min_value=100, max_value=180, value=None, step=1, key="sodium", placeholder="Ex: 140")
+        with col2:
+            st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, value=None, step=0.1, format="%.1f", key="creatinine_meld", placeholder="Ex: 1.0")
             st.number_input("Albumina Sérica (g/dL)", min_value=1.0, max_value=6.0, value=None, step=0.1, format="%.1f", key="albumin", placeholder="Ex: 4.0")
-            
-    st.subheader("Histórico Clínico e Comorbidades")
-    col1, col2, col3 = st.columns(3)
+            st.checkbox("Em diálise (2x na última semana)?", value=False, key="dialise")
+
+    with st.expander("Nefrologia"):
+        st.number_input("Creatinina Sérica (para CKD-EPI) (mg/dL)", min_value=0.1, max_value=20.0, value=None, step=0.1, format="%.1f", key="creatinine_egfr", placeholder="Ex: 1.0")
+
+    st.subheader("Histórico Clínico e Questionários")
+    col1, col2 = st.columns(2)
     with col1:
+        st.markdown("**Comorbidades**")
         st.checkbox("Diabetes Mellitus?", value=False, key="dm")
         st.checkbox("Fumante atual?", value=False, key="smoking")
-    with col2:
         st.checkbox("Em uso de anti-hipertensivo?", value=False, key="bptreat")
         st.checkbox("Em uso de estatina?", value=False, key="statin")
-    with col3:
-        # Placeholders para Child-Pugh
+    
+    with col2:
+        st.markdown("**Sintomas (Gastro/Pneumo)**")
         st.selectbox("Ascite (Child-Pugh)", ["Ausente", "Leve", "Moderada/Grave"], key="ascites", index=0)
         st.selectbox("Encefalopatia (Child-Pugh)", ["Ausente", "Grau 1-2", "Grau 3-4"], key="encephalopathy", index=0)
+        st.selectbox("Dispneia (mMRC)", [
+            "Grau 0: Dispneia apenas com exercício intenso",
+            "Grau 1: Dispneia ao andar apressado ou subir ladeira leve",
+            "Grau 2: Anda mais devagar ou precisa parar para respirar",
+            "Grau 3: Para para respirar após ~100m",
+            "Grau 4: Tanta dispneia que não sai de casa"
+        ], key="mmrc_score", index=0)
+
+    with st.expander("Questionário CAT (DPOC)"):
+        st.markdown("Responda de 0 (Nunca) a 5 (Sempre) para cada sintoma.")
+        st.slider("1. Eu tusso muito?", 0, 5, 0, key="cat_1")
+        st.slider("2. Tenho muito catarro (expectoração) no peito?", 0, 5, 0, key="cat_2")
+        st.slider("3. Sinto o peito muito apertado?", 0, 5, 0, key="cat_3")
+        st.slider("4. Sinto falta de ar ao subir um lance de escadas?", 0, 5, 0, key="cat_4")
+        st.slider("5. Sinto-me limitado(a) nas minhas atividades em casa?", 0, 5, 0, key="cat_5")
+        st.slider("6. Sinto-me confiante para sair de casa?", 0, 5, 0, key="cat_6")
+        st.slider("7. Durmo profundamente?", 0, 5, 0, key="cat_7")
+        st.slider("8. Tenho muita energia?", 0, 5, 0, key="cat_8")
+        
 
 def pagina_cardiologia():
     """Página de resultados de Cardiologia. Apenas LÊ de st.session_state."""
-    st.title("Resultados de Cardiologia")
+    st.title("Scores de Cardiologia")
     
+    # --- PREVENT ---
     st.header("Risco Cardiovascular (PREVENT)")
+    st.markdown("O score PREVENT estima o risco em 10 anos de Doença Cardiovascular Total (DCV), Doença Aterosclerótica (ASCVD) e Insuficiência Cardíaca (IC) em adultos de 30 a 79 anos.")
     
-    # Roda o cálculo lendo do st.session_state
-    risco_dcv_total, risco_ascvd, risco_hf, modelo_utilizado = rodar_calculo_prevent()
+    # Puxa os valores necessários do 'prontuário'
+    try:
+        prevent_data = {
+            "sex": 1 if st.session_state.sex == "Feminino" else 0,
+            "age": st.session_state.age,
+            "tc": st.session_state.tc,
+            "hdl": st.session_state.hdl,
+            "sbp": st.session_state.sbp,
+            "dm": 1 if st.session_state.dm else 0,
+            "smoking": 1 if st.session_state.smoking else 0,
+            "bmi": st.session_state.bmi,
+            "egfr": st.session_state.egfr_prevent, # Usa o eGFR do painel cardio
+            "bptreat": 1 if st.session_state.bptreat else 0,
+            "statin": 1 if st.session_state.statin else 0,
+            "uacr": st.session_state.uacr_val,
+            "hba1c": st.session_state.hba1c_val
+        }
+        
+        # Verifica se os campos obrigatórios estão preenchidos
+        required_prevent = [prevent_data[k] for k in ['age', 'tc', 'hdl', 'sbp', 'bmi', 'egfr']]
+        if not all(v is not None for v in required_prevent):
+            raise TypeError("Campos obrigatórios do PREVENT não preenchidos.")
 
-    if risco_dcv_total is None:
-        st.warning("Por favor, preencha todos os dados obrigatórios na página 'Dados do Paciente' para calcular o risco PREVENT.")
-        st.caption("(Campos obrigatórios: Idade, IMC, Col. Total, HDL, PAS, eGFR).")
-    else:
+        # Lógica de seleção de modelo
+        uacr_fornecido = prevent_data["uacr"] is not None
+        hba1c_fornecido = prevent_data["hba1c"] is not None
+        logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = np.nan, np.nan, np.nan
+
+        if not uacr_fornecido and not hba1c_fornecido:
+            modelo_utilizado = "Modelo 'Base' utilizado."
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**prevent_data)
+        elif uacr_fornecido and not hba1c_fornecido:
+            modelo_utilizado = "Modelo 'Base + RAC (UACR)' utilizado."
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**prevent_data)
+        elif not uacr_fornecido and hba1c_fornecido:
+            modelo_utilizado = "Modelo 'Base + HbA1c' utilizado."
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**prevent_data)
+        else:
+            modelo_utilizado = "Modelo 'Full' (RAC + HbA1c) utilizado."
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(**prevent_data)
+
+        risco_dcv_total, risco_ascvd, risco_hf = calcular_riscos_finais(
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF,
+            prevent_data['age'], prevent_data['tc'], prevent_data['hdl'], prevent_data['statin'], prevent_data['bmi']
+        )
+        
         col1, col2, col3 = st.columns(3)
         col1.metric("Risco de DCV Total", formatar_risco(risco_dcv_total))
         col2.metric("Risco de ASCVD", formatar_risco(risco_ascvd))
         col3.metric("Risco de Insuficiência Cardíaca", formatar_risco(risco_hf))
         st.caption(modelo_utilizado)
+        exibir_interpretacao_prevent(risco_dcv_total)
 
-        if math.isnan(risco_dcv_total) or math.isnan(risco_hf):
-            st.warning("Um ou mais riscos são 'N/A' devido a dados de entrada fora do intervalo (ex: Colesterol/Estatinas são necessários para DCV/ASCVD; IMC é necessário para IC).")
-        
-        st.divider()
-        exibir_interpretacao(risco_dcv_total)
+    except Exception as e:
+        st.warning(f"Por favor, preencha todos os dados obrigatórios na página 'Dados do Paciente' para calcular o risco PREVENT.")
+        st.caption("(Campos obrigatórios: Idade, IMC, Col. Total, HDL, PAS, eGFR).")
+
 
 def pagina_gastroenterologia():
     """Página de resultados de Gastroenterologia."""
-    st.title("Resultados de Gastroenterologia")
-    
-    st.header("MELD 3.0 / MELD-Na")
-    st.info("Cálculo do MELD em breve...")
-    # Aqui iríamos ler de st.session_state.bilirubin, .creatinine, .inr, .sodium
+    st.title("Scores de Gastroenterologia")
 
+    # --- MELD 3.0 ---
+    st.header("MELD 3.0")
+    st.markdown("O 'Model for End-Stage Liver Disease 3.0' é usado para avaliar a gravidade da doença hepática crônica e priorizar pacientes para transplante de fígado.")
+    try:
+        meld_data = {
+            "sex_str": st.session_state.sex,
+            "bilirubin": st.session_state.bilirubin,
+            "inr": st.session_state.inr,
+            "creatinine": st.session_state.creatinine_meld,
+            "sodium": st.session_state.sodium,
+            "albumin": st.session_state.albumin,
+            "dialise": st.session_state.dialise
+        }
+        if not all(v is not None for v in [meld_data[k] for k in ['bilirubin', 'inr', 'creatinine', 'sodium', 'albumin']]):
+            raise TypeError("Campos MELD não preenchidos.")
+        
+        score_meld = calcular_meld_3_0(**meld_data)
+        st.metric("Score MELD 3.0", formatar_score(score_meld, 0))
+        exibir_interpretacao_meld(score_meld)
+
+    except Exception as e:
+        st.warning("Por favor, preencha os dados na página 'Dados do Paciente' para calcular o MELD 3.0.")
+        st.caption("(Campos obrigatórios: Sexo, Bilirrubina, INR, Creatinina, Sódio, Albumina, Diálise).")
+
+    st.divider()
+
+    # --- Child-Pugh ---
     st.header("Child-Pugh")
-    st.info("Cálculo de Child-Pugh em breve...")
-    # Aqui iríamos ler de st.session_state.bilirubin, .inr, .albumin, .ascites, .encephalopathy
+    st.markdown("O score de Child-Pugh (ou Child-Turcotte-Pugh) é usado para avaliar o prognóstico da doença hepática crônica, principalmente a cirrose.")
+    try:
+        cp_data = {
+            "bilirubin": st.session_state.bilirubin,
+            "inr": st.session_state.inr,
+            "albumin": st.session_state.albumin,
+            "ascites": st.session_state.ascites,
+            "encephalopathy": st.session_state.encephalopathy
+        }
+        if not all(v is not None for v in [cp_data[k] for k in ['bilirubin', 'inr', 'albumin']]):
+            raise TypeError("Campos Child-Pugh não preenchidos.")
+            
+        score_cp = calcular_child_pugh(**cp_data)
+        st.metric("Score Child-Pugh", f"{score_cp} pontos")
+        exibir_interpretacao_child_pugh(score_cp)
+
+    except Exception as e:
+        st.warning("Por favor, preencha os dados na página 'Dados do Paciente' para calcular o Child-Pugh.")
+        st.caption("(Campos obrigatórios: Bilirrubina, INR, Albumina, Ascite, Encefalopatia).")
+        
+    st.divider()
+
+    # --- FIB4 ---
+    st.header("FIB-4 (Fibrosis-4 Index)")
+    st.markdown("O índice FIB-4 é um score não invasivo para estimar a fibrose hepática em pacientes com doença hepática crônica (ex: Hepatite C, DHGNA).")
+    try:
+        fib4_data = {
+            "age": st.session_state.age,
+            "ast": st.session_state.ast,
+            "alt": st.session_state.alt,
+            "platelets": st.session_state.platelets
+        }
+        if not all(v is not None for v in fib4_data.values()):
+            raise TypeError("Campos FIB4 não preenchidos.")
+        
+        score_fib4 = calcular_fib4(**fib4_data)
+        st.metric("Score FIB-4", formatar_score(score_fib4, 2))
+        exibir_interpretacao_fib4(score_fib4, fib4_data["age"])
+
+    except Exception as e:
+        st.warning("Por favor, preencha os dados na página 'Dados do Paciente' para calcular o FIB-4.")
+        st.caption("(Campos obrigatórios: Idade, AST, ALT, Plaquetas).")
+
+
+def pagina_endocrinologia():
+    st.title("Scores de Endocrinologia")
+
+    # --- IMC ---
+    st.header("Índice de Massa Corporal (IMC)")
+    st.markdown("O IMC é uma medida internacional usada para calcular se uma pessoa está no peso ideal.")
+    try:
+        imc_data = {
+            "weight": st.session_state.weight,
+            "height_cm": st.session_state.height_cm
+        }
+        if not all(v is not None for v in imc_data.values()):
+            raise TypeError("Campos de IMC não preenchidos.")
+        
+        score_imc = calcular_imc(**imc_data)
+        st.metric("IMC", f"{formatar_score(score_imc, 1)} kg/m²")
+        exibir_interpretacao_imc(score_imc)
+
+    except Exception as e:
+        st.warning("Por favor, preencha os dados na página 'Dados do Paciente' para calcular o IMC.")
+        st.caption("(Campos obrigatórios: Peso, Altura).")
+
+    st.divider()
+    
+    # --- HOMA ---
+    st.header("HOMA-IR e HOMA-BETA")
+    st.markdown("O 'Homeostatic Model Assessment' (HOMA) é um método para quantificar a resistência à insulina (HOMA-IR) e a função das células beta pancreáticas (HOMA-BETA).")
+    try:
+        homa_data = {
+            "glucose_mg_dl": st.session_state.glucose_fasting,
+            "insulin": st.session_state.insulin_fasting
+        }
+        if not all(v is not None for v in homa_data.values()):
+            raise TypeError("Campos HOMA não preenchidos.")
+        
+        score_homa_ir = calcular_homa_ir(**homa_data)
+        score_homa_beta = calcular_homa_beta(**homa_data)
+        
+        col1, col2 = st.columns(2)
+        col1.metric("HOMA-IR", formatar_score(score_homa_ir, 2))
+        col2.metric("HOMA-BETA", f"{formatar_score(score_homa_beta, 1)}%")
+        
+        with col1:
+            exibir_interpretacao_homa_ir(score_homa_ir)
+
+    except Exception as e:
+        st.warning("Por favor, preencha os dados na página 'Dados do Paciente' para calcular o HOMA.")
+        st.caption("(Campos obrigatórios: Glicose de Jejum, Insulina de Jejum).")
+
+def pagina_pneumologia():
+    st.title("Scores de Pneumologia")
+
+    # --- CAT ---
+    st.header("CAT (COPD Assessment Test)")
+    st.markdown("O Teste de Avaliação da DPOC (CAT) é um questionário para quantificar o impacto da DPOC na saúde e bem-estar do paciente.")
+    try:
+        cat_scores = [
+            st.session_state.cat_1, st.session_state.cat_2, st.session_state.cat_3,
+            st.session_state.cat_4, st.session_state.cat_5, st.session_state.cat_6,
+            st.session_state.cat_7, st.session_state.cat_8
+        ]
+        score_cat = sum(cat_scores)
+        
+        st.metric("Score CAT Total", f"{score_cat} / 40")
+        exibir_interpretacao_cat(score_cat)
+        st.caption("Os valores do questionário são definidos na página 'Dados do Paciente'.")
+
+    except Exception as e:
+        st.error("Erro ao calcular o CAT. Verifique os dados de entrada.")
+
+    st.divider()
+
+    # --- mMRC ---
+    st.header("Escala de Dispneia mMRC")
+    st.markdown("A escala 'Modified Medical Research Council' (mMRC) classifica a gravidade da dispneia em pacientes com doenças respiratórias.")
+    try:
+        mmrc_str = st.session_state.mmrc_score
+        # Extrai o grau (o primeiro caractere)
+        score_mmrc = int(mmrc_str[5])
+        
+        st.metric("Score mMRC", f"Grau {score_mmrc}")
+        exibir_interpretacao_mmrc(score_mmrc)
+        st.caption("O grau de dispneia é definido na página 'Dados do Paciente'.")
+        
+    except Exception as e:
+        st.error("Erro ao calcular o mMRC. Verifique os dados de entrada.")
+
+
+def pagina_nefrologia():
+    st.title("Scores de Nefrologia")
+
+    # --- eGFR (CKD-EPI) ---
+    st.header("eGFR (CKD-EPI 2021)")
+    st.markdown("Calcula a Taxa de Filtração Glomerular estimada (eGFR) usando a fórmula CKD-EPI 2021, que não utiliza raça.")
+    try:
+        egfr_data = {
+            "creatinine": st.session_state.creatinine_egfr,
+            "age": st.session_state.age,
+            "sex_str": st.session_state.sex
+        }
+        if not all(v is not None for v in egfr_data.values()):
+            raise TypeError("Campos eGFR não preenchidos.")
+        
+        score_egfr = calcular_egfr_ckd_epi(**egfr_data)
+        st.metric("eGFR (CKD-EPI 2021)", f"{formatar_score(score_egfr, 0)} mL/min/1.73 m²")
+        exibir_interpretacao_egfr(score_egfr)
+
+    except Exception as e:
+        st.warning("Por favor, preencha os dados na página 'Dados do Paciente' para calcular o eGFR.")
+        st.caption("(Campos obrigatórios: Creatinina Sérica, Idade, Sexo).")
+
 
 def pagina_resumo():
     """Página que mostra todos os resultados agrupados."""
     st.title("Resumo Geral dos Scores")
+    st.markdown("Todos os scores calculados com base nos dados do 'Prontuário do Paciente'.")
 
-    with st.expander("Resultados de Cardiologia", expanded=True):
+    with st.expander("Cardiologia", expanded=True):
         st.subheader("Risco Cardiovascular (PREVENT)")
-        risco_dcv_total, risco_ascvd, risco_hf, modelo_utilizado = rodar_calculo_prevent()
-        
-        if risco_dcv_total is None:
-            st.warning("Dados insuficientes para calcular o risco PREVENT.")
-            st.caption("(Campos obrigatórios: Idade, IMC, Col. Total, HDL, PAS, eGFR).")
-        else:
+        try:
+            prevent_data = {
+                "sex": 1 if st.session_state.sex == "Feminino" else 0, "age": st.session_state.age, "tc": st.session_state.tc,
+                "hdl": st.session_state.hdl, "sbp": st.session_state.sbp, "dm": 1 if st.session_state.dm else 0,
+                "smoking": 1 if st.session_state.smoking else 0, "bmi": st.session_state.bmi, "egfr": st.session_state.egfr_prevent,
+                "bptreat": 1 if st.session_state.bptreat else 0, "statin": 1 if st.session_state.statin else 0,
+                "uacr": st.session_state.uacr_val, "hba1c": st.session_state.hba1c_val
+            }
+            required_prevent = [prevent_data[k] for k in ['age', 'tc', 'hdl', 'sbp', 'bmi', 'egfr']]
+            if not all(v is not None for v in required_prevent): raise Exception()
+            
+            uacr_fornecido = prevent_data["uacr"] is not None
+            hba1c_fornecido = prevent_data["hba1c"] is not None
+            if not uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**prevent_data)
+            elif uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**prevent_data)
+            elif not uacr_fornecido and hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**prevent_data)
+            else: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(**prevent_data)
+            risco_dcv_total, risco_ascvd, risco_hf = calcular_riscos_finais(logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF, prevent_data['age'], prevent_data['tc'], prevent_data['hdl'], prevent_data['statin'], prevent_data['bmi'])
+            
             col1, col2, col3 = st.columns(3)
-            col1.metric("Risco de DCV Total", formatar_risco(risco_dcv_total))
-            col2.metric("Risco de ASCVD", formatar_risco(risco_ascvd))
-            col3.metric("Risco de Insuficiência Cardíaca", formatar_risco(risco_hf))
-            st.caption(modelo_utilizado)
-            exibir_interpretacao(risco_dcv_total)
-    
-    with st.expander("Resultados de Gastroenterologia", expanded=True):
-        st.subheader("MELD 3.0 / MELD-Na")
-        st.info("Cálculo do MELD em breve...")
+            col1.metric("Risco DCV Total", formatar_risco(risco_dcv_total))
+            col2.metric("Risco ASCVD", formatar_risco(risco_ascvd))
+            col3.metric("Risco IC", formatar_risco(risco_hf))
+            exibir_interpretacao_prevent(risco_dcv_total)
+        except:
+            st.info("Dados insuficientes para calcular o score PREVENT.")
 
-        st.subheader("Child-Pugh")
-        st.info("Cálculo de Child-Pugh em breve...")
+    with st.expander("Gastroenterologia", expanded=True):
+        st.subheader("MELD 3.0")
+        try:
+            meld_data = {"sex_str": st.session_state.sex, "bilirubin": st.session_state.bilirubin, "inr": st.session_state.inr, "creatinine": st.session_state.creatinine_meld, "sodium": st.session_state.sodium, "albumin": st.session_state.albumin, "dialise": st.session_state.dialise}
+            if not all(v is not None for v in [meld_data[k] for k in ['bilirubin', 'inr', 'creatinine', 'sodium', 'albumin']]): raise Exception()
+            score_meld = calcular_meld_3_0(**meld_data)
+            st.metric("Score MELD 3.0", formatar_score(score_meld, 0))
+            exibir_interpretacao_meld(score_meld)
+        except:
+            st.info("Dados insuficientes para calcular o MELD 3.0.")
         
+        st.subheader("Child-Pugh")
+        try:
+            cp_data = {"bilirubin": st.session_state.bilirubin, "inr": st.session_state.inr, "albumin": st.session_state.albumin, "ascites": st.session_state.ascites, "encephalopathy": st.session_state.encephalopathy}
+            if not all(v is not None for v in [cp_data[k] for k in ['bilirubin', 'inr', 'albumin']]): raise Exception()
+            score_cp = calcular_child_pugh(**cp_data)
+            st.metric("Score Child-Pugh", f"{score_cp} pontos")
+            exibir_interpretacao_child_pugh(score_cp)
+        except:
+            st.info("Dados insuficientes para calcular o Child-Pugh.")
+
+        st.subheader("FIB-4")
+        try:
+            fib4_data = {"age": st.session_state.age, "ast": st.session_state.ast, "alt": st.session_state.alt, "platelets": st.session_state.platelets}
+            if not all(v is not None for v in fib4_data.values()): raise Exception()
+            score_fib4 = calcular_fib4(**fib4_data)
+            st.metric("Score FIB-4", formatar_score(score_fib4, 2))
+            exibir_interpretacao_fib4(score_fib4, fib4_data["age"])
+        except:
+            st.info("Dados insuficientes para calcular o FIB-4.")
+
+    with st.expander("Endocrinologia", expanded=True):
+        st.subheader("IMC")
+        try:
+            imc_data = {"weight": st.session_state.weight, "height_cm": st.session_state.height_cm}
+            if not all(v is not None for v in imc_data.values()): raise Exception()
+            score_imc = calcular_imc(**imc_data)
+            st.metric("IMC", f"{formatar_score(score_imc, 1)} kg/m²")
+            exibir_interpretacao_imc(score_imc)
+        except:
+            st.info("Dados insuficientes para calcular o IMC.")
+
+        st.subheader("HOMA-IR & HOMA-BETA")
+        try:
+            homa_data = {"glucose_mg_dl": st.session_state.glucose_fasting, "insulin": st.session_state.insulin_fasting}
+            if not all(v is not None for v in homa_data.values()): raise Exception()
+            score_homa_ir = calcular_homa_ir(**homa_data)
+            score_homa_beta = calcular_homa_beta(**homa_data)
+            col1, col2 = st.columns(2)
+            col1.metric("HOMA-IR", formatar_score(score_homa_ir, 2))
+            col2.metric("HOMA-BETA", f"{formatar_score(score_homa_beta, 1)}%")
+            with col1:
+                exibir_interpretacao_homa_ir(score_homa_ir)
+        except:
+            st.info("Dados insuficientes para calcular o HOMA.")
+
+    with st.expander("Pneumologia", expanded=True):
+        st.subheader("CAT (DPOC)")
+        try:
+            cat_scores = [st.session_state.cat_1, st.session_state.cat_2, st.session_state.cat_3, st.session_state.cat_4, st.session_state.cat_5, st.session_state.cat_6, st.session_state.cat_7, st.session_state.cat_8]
+            score_cat = sum(cat_scores)
+            st.metric("Score CAT Total", f"{score_cat} / 40")
+            exibir_interpretacao_cat(score_cat)
+        except:
+            st.info("Questionário CAT não preenchido.")
+        
+        st.subheader("mMRC (Dispneia)")
+        try:
+            mmrc_str = st.session_state.mmrc_score
+            score_mmrc = int(mmrc_str[5]) # Extrai o número do "Grau X"
+            st.metric("Score mMRC", f"Grau {score_mmrc}")
+            exibir_interpretacao_mmrc(score_mmrc)
+        except:
+            st.info("Score mMRC não selecionado.")
+
+    with st.expander("Nefrologia", expanded=True):
+        st.subheader("eGFR (CKD-EPI 2021)")
+        try:
+            egfr_data = {"creatinine": st.session_state.creatinine_egfr, "age": st.session_state.age, "sex_str": st.session_state.sex}
+            if not all(v is not None for v in egfr_data.values()): raise Exception()
+            score_egfr = calcular_egfr_ckd_epi(**egfr_data)
+            st.metric("eGFR (CKD-EPI 2021)", f"{formatar_score(score_egfr, 0)} mL/min/1.73 m²")
+            exibir_interpretacao_egfr(score_egfr)
+        except:
+            st.info("Dados insuficientes para calcular o eGFR.")
+
+
 # --- 3. INICIALIZAÇÃO E ROTEAMENTO ---
 
 def initialize_session_state():
-    """Define todos os valores possíveis no state para evitar erros."""
+    """Define todos os valores possíveis no state para evitar erros na primeira execução."""
     params = {
         "sex": "Feminino", "age": None, "bmi": None, "tc": None, "hdl": None, 
-        "sbp": None, "egfr": None, "dm": False, "smoking": False, 
-        "bptreat": False, "statin": False, "use_uacr": False, "uacr_val": None, 
-        "use_hba1c": False, "hba1c_val": None, "bilirubin": None, 
-        "creatinine": None, "inr": None, "sodium": None, "albumin": None, 
-        "ascites": "Ausente", "encephalopathy": "Ausente"
+        "sbp": None, "egfr_prevent": None, "dm": False, "smoking": False, 
+        "bptreat": False, "statin": False, "uacr_val": None, "hba1c_val": None, 
+        "bilirubin": None, "creatinine_meld": None, "inr": None, "sodium": None, 
+        "albumin": None, "dialise": False, "ascites": "Ausente", 
+        "encephalopathy": "Ausente", "ast": None, "alt": None, "platelets": None,
+        "weight": None, "height_cm": None, "glucose_fasting": None, 
+        "insulin_fasting": None, "creatinine_egfr": None,
+        "cat_1": 0, "cat_2": 0, "cat_3": 0, "cat_4": 0, "cat_5": 0, "cat_6": 0, 
+        "cat_7": 0, "cat_8": 0,
+        "mmrc_score": "Grau 0: Dispneia apenas com exercício intenso"
     }
     for key, default_value in params.items():
         if key not in st.session_state:
@@ -351,6 +909,9 @@ def main():
         "Resumo Geral": pagina_resumo,
         "Cardiologia": pagina_cardiologia,
         "Gastroenterologia": pagina_gastroenterologia,
+        "Endocrinologia": pagina_endocrinologia,
+        "Pneumologia": pagina_pneumologia,
+        "Nefrologia": pagina_nefrologia,
     }
     
     selecao = st.sidebar.radio("Navegação:", list(paginas.keys()))
