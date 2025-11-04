@@ -712,18 +712,20 @@ def pagina_cardiologia():
         logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = np.nan, np.nan, np.nan
         modelo_utilizado = ""
 
-        # Preparar dados base (sem uacr e hba1c)
+        # Preparar dados filtrados para cada modelo
         base_data = {k: v for k, v in prevent_data.items() if k not in ['uacr', 'hba1c']}
+        uacr_data = {k: v for k, v in prevent_data.items() if k != 'hba1c'}
+        hba1c_data = {k: v for k, v in prevent_data.items() if k != 'uacr'}
 
         if not uacr_fornecido and not hba1c_fornecido:
             modelo_utilizado = "Modelo 'Base' utilizado."
             logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**base_data)
         elif uacr_fornecido and not hba1c_fornecido:
             modelo_utilizado = "Modelo 'Base + RAC (UACR)' utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**prevent_data)
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**uacr_data)
         elif not uacr_fornecido and hba1c_fornecido:
             modelo_utilizado = "Modelo 'Base + HbA1c' utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**prevent_data)
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**hba1c_data)
         else:
             modelo_utilizado = "Modelo 'Full' (RAC + HbA1c) utilizado."
             logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(**prevent_data)
@@ -963,9 +965,11 @@ def pagina_resumo():
             uacr_fornecido = prevent_data["uacr"] is not None
             hba1c_fornecido = prevent_data["hba1c"] is not None
             base_data = {k: v for k, v in prevent_data.items() if k not in ['uacr', 'hba1c']}
+            uacr_data = {k: v for k, v in prevent_data.items() if k != 'hba1c'}
+            hba1c_data = {k: v for k, v in prevent_data.items() if k != 'uacr'}
             if not uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**base_data)
-            elif uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**prevent_data)
-            elif not uacr_fornecido and hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**prevent_data)
+            elif uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**uacr_data)
+            elif not uacr_fornecido and hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**hba1c_data)
             else: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(**prevent_data)
             risco_dcv_total, risco_ascvd, risco_hf = calcular_riscos_finais(logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF, prevent_data['age'], prevent_data['tc'], prevent_data['hdl'], prevent_data['statin'], prevent_data['bmi'])
             
