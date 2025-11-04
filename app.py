@@ -526,13 +526,12 @@ def pagina_dados_paciente():
     st.markdown("Insira os dados do paciente abaixo. Os resultados serão calculados automaticamente nas páginas de especialidade.")
 
     # --- CORREÇÃO DO BUG DE PERSISTÊNCIA ---
-    # Cada widget usa o parâmetro 'key' para vincular automaticamente ao st.session_state
+    # Todos os widgets usam o parâmetro 'key' para vincular automaticamente ao st.session_state
     # Isso garante que os dados persistam ao navegar entre páginas
     
     st.subheader("Dados Demográficos e Vitais")
     col1, col2 = st.columns(2)
     with col1:
-        # Radio usando key para vinculação automática
         st.radio("Sexo Biológico", ["Feminino", "Masculino"], horizontal=True, key="sex")
         
         st.number_input("Idade (anos)", min_value=18, max_value=120, step=1, key="age", placeholder="Ex: 55")
