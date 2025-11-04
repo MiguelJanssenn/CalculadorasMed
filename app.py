@@ -407,41 +407,43 @@ def pagina_dados_paciente():
     st.title("Prontuário do Paciente")
     st.markdown("Insira os dados do paciente abaixo. Os resultados serão calculados automaticamente nas páginas de especialidade.")
 
+    # --- CORREÇÃO DO BUG DE PERSISTÊNCIA ---
+    # Cada widget agora lê seu valor do st.session_state, garantindo a persistência
+    
     st.subheader("Dados Demográficos e Vitais")
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
         st.radio("Sexo Biológico", ["Feminino", "Masculino"], horizontal=True, key="sex", index=("Feminino", "Masculino").index(st.session_state.sex))
         st.number_input("Idade (anos)", min_value=18, max_value=120, value=st.session_state.age, step=1, key="age", placeholder="Ex: 55")
     with col2:
         st.number_input("Peso (kg)", min_value=30.0, max_value=300.0, value=st.session_state.weight, step=0.1, format="%.1f", key="weight", placeholder="Ex: 70.0")
         st.number_input("Altura (cm)", min_value=100.0, max_value=250.0, value=st.session_state.height_cm, step=0.1, format="%.1f", key="height_cm", placeholder="Ex: 170.0")
-    with col3:
-        st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, value=st.session_state.sbp, step=1, key="sbp", placeholder="Ex: 120")
 
-    st.subheader("Exames Laboratoriais")
-    
-    with st.expander("Painel Geral / Metabólico"):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, value=st.session_state.tc, step=1, key="tc", placeholder="Ex: 200")
-            st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, value=st.session_state.hdl, step=1, key="hdl", placeholder="Ex: 50")
-            st.number_input("Glicose de Jejum (mg/dL)", min_value=40, max_value=500, value=st.session_state.glucose_fasting, step=1, key="glucose_fasting", placeholder="Ex: 90")
-            st.number_input("Insulina de Jejum (µU/mL)", min_value=1.0, max_value=300.0, value=st.session_state.insulin_fasting, step=0.1, format="%.1f", key="insulin_fasting", placeholder="Ex: 8.0")
-        with col2:
-            st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, value=st.session_state.creatinine, step=0.1, format="%.1f", key="creatinine", placeholder="Ex: 1.0")
-            st.number_input("AST (TGO) (U/L)", min_value=1, max_value=1000, value=st.session_state.ast, step=1, key="ast", placeholder="Ex: 25")
-            st.number_input("ALT (TGP) (U/L)", min_value=1, max_value=1000, value=st.session_state.alt, step=1, key="alt", placeholder="Ex: 25")
-            st.number_input("Plaquetas (x10³/µL)", min_value=10, max_value=1000, value=st.session_state.platelets, step=1, key="platelets", placeholder="Ex: 250")
-        with col3:
-            st.number_input("Bilirrubina Total (mg/dL)", min_value=0.1, max_value=50.0, value=st.session_state.bilirubin, step=0.1, format="%.1f", key="bilirubin", placeholder="Ex: 1.2")
-            st.number_input("INR", min_value=0.5, max_value=10.0, value=st.session_state.inr, step=0.1, format="%.1f", key="inr", placeholder="Ex: 1.1")
-            st.number_input("Sódio Sérico (mEq/L)", min_value=100, max_value=180, value=st.session_state.sodium, step=1, key="sodium", placeholder="Ex: 140")
-            st.number_input("Albumina Sérica (g/dL)", min_value=1.0, max_value=6.0, value=st.session_state.albumin, step=0.1, format="%.1f", key="albumin", placeholder="Ex: 4.0")
-    
-    with st.expander("Painel PREVENT (Opcional)"):
+    st.subheader("Dados Laboratoriais Unificados")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, value=st.session_state.creatinine, step=0.1, format="%.1f", key="creatinine", placeholder="Ex: 1.0")
+        st.number_input("Bilirrubina Total (mg/dL)", min_value=0.1, max_value=50.0, value=st.session_state.bilirubin, step=0.1, format="%.1f", key="bilirubin", placeholder="Ex: 1.2")
+        st.number_input("Albumina Sérica (g/dL)", min_value=1.0, max_value=6.0, value=st.session_state.albumin, step=0.1, format="%.1f", key="albumin", placeholder="Ex: 4.0")
+    with col2:
+        st.number_input("Sódio Sérico (mEq/L)", min_value=100, max_value=180, value=st.session_state.sodium, step=1, key="sodium", placeholder="Ex: 140")
+        st.number_input("INR", min_value=0.5, max_value=10.0, value=st.session_state.inr, step=0.1, format="%.1f", key="inr", placeholder="Ex: 1.1")
+        st.number_input("Plaquetas (x10³/µL)", min_value=10, max_value=1000, value=st.session_state.platelets, step=1, key="platelets", placeholder="Ex: 250")
+    with col3:
+        st.number_input("AST (TGO) (U/L)", min_value=1, max_value=1000, value=st.session_state.ast, step=1, key="ast", placeholder="Ex: 25")
+        st.number_input("ALT (TGP) (U/L)", min_value=1, max_value=1000, value=st.session_state.alt, step=1, key="alt", placeholder="Ex: 25")
+
+    st.subheader("Dados Metabólicos e de Risco")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, value=st.session_state.tc, step=1, key="tc", placeholder="Ex: 200")
+        st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, value=st.session_state.hdl, step=1, key="hdl", placeholder="Ex: 50")
+        st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, value=st.session_state.sbp, step=1, key="sbp", placeholder="Ex: 120")
+    with col2:
+        st.number_input("Glicose de Jejum (mg/dL)", min_value=40, max_value=500, value=st.session_state.glucose_fasting, step=1, key="glucose_fasting", placeholder="Ex: 90")
+        st.number_input("Insulina de Jejum (µU/mL)", min_value=1.0, max_value=300.0, value=st.session_state.insulin_fasting, step=0.1, format="%.1f", key="insulin_fasting", placeholder="Ex: 8.0")
         st.number_input("Relação Albumina/Creatinina Urinária (RAC) (mg/g)", min_value=0.0, max_value=5000.0, value=st.session_state.uacr_val, step=0.1, format="%.1f", key="uacr_val", placeholder="Opcional: Ex: 10.0")
         st.number_input("Hemoglobina Glicada (HbA1c) (%)", min_value=3.0, max_value=20.0, value=st.session_state.hba1c_val, step=0.1, format="%.1f", key="hba1c_val", placeholder="Opcional: Ex: 5.7")
-
 
     st.subheader("Histórico Clínico e Questionários")
     col1, col2, col3 = st.columns(3)
@@ -455,15 +457,20 @@ def pagina_dados_paciente():
     
     with col2:
         st.markdown("**Sintomas (Gastro/Pneumo)**")
-        st.selectbox("Ascite (Child-Pugh)", ["Ausente", "Leve", "Moderada/Grave"], key="ascites", index=["Ausente", "Leve", "Moderada/Grave"].index(st.session_state.ascites))
-        st.selectbox("Encefalopatia (Child-Pugh)", ["Ausente", "Grau 1-2", "Grau 3-4"], key="encephalopathy", index=["Ausente", "Grau 1-2", "Grau 3-4"].index(st.session_state.encephalopathy))
-        st.selectbox("Dispneia (mMRC)", [
+        ascites_options = ["Ausente", "Leve", "Moderada/Grave"]
+        st.selectbox("Ascite (Child-Pugh)", ascites_options, key="ascites", index=ascites_options.index(st.session_state.ascites))
+        
+        enceph_options = ["Ausente", "Grau 1-2", "Grau 3-4"]
+        st.selectbox("Encefalopatia (Child-Pugh)", enceph_options, key="encephalopathy", index=enceph_options.index(st.session_state.encephalopathy))
+        
+        mmrc_options = [
             "Grau 0: Dispneia apenas com exercício intenso",
             "Grau 1: Dispneia ao andar apressado ou subir ladeira leve",
             "Grau 2: Anda mais devagar ou precisa parar para respirar",
             "Grau 3: Para para respirar após ~100m",
             "Grau 4: Tanta dispneia que não sai de casa"
-        ], key="mmrc_score", index=["Grau 0: Dispneia apenas com exercício intenso", "Grau 1: Dispneia ao andar apressado ou subir ladeira leve", "Grau 2: Anda mais devagar ou precisa parar para respirar", "Grau 3: Para para respirar após ~100m", "Grau 4: Tanta dispneia que não sai de casa"].index(st.session_state.mmrc_score))
+        ]
+        st.selectbox("Dispneia (mMRC)", mmrc_options, key="mmrc_score", index=mmrc_options.index(st.session_state.mmrc_score))
 
     with col3:
         st.markdown("**Questionário CAT (DPOC)**")
@@ -545,7 +552,7 @@ def pagina_cardiologia():
 
     except Exception as e:
         st.warning(f"Por favor, preencha todos os dados obrigatórios na página 'Dados do Paciente' para calcular o risco PREVENT.")
-        st.caption("(Campos obrigatórios: Idade, Peso, Altura, Col. Total, HDL, PAS, Creatinina Sérica, Sexo).")
+        st.caption(f"(Campos obrigatórios: Idade, Peso, Altura, Col. Total, HDL, PAS, Creatinina Sérica, Sexo). Erro: {e}")
 
 
 def pagina_gastroenterologia():
@@ -738,22 +745,29 @@ def pagina_resumo():
     st.title("Resumo Geral dos Scores")
     st.markdown("Todos os scores calculados com base nos dados do 'Prontuário do Paciente'.")
 
+    # Cálculos de dependência primeiro
+    try:
+        calc_bmi = calcular_imc(st.session_state.weight, st.session_state.height_cm)
+    except:
+        calc_bmi = np.nan
+    
+    try:
+        calc_egfr = calcular_egfr_ckd_epi(st.session_state.creatinine, st.session_state.age, st.session_state.sex)
+    except:
+        calc_egfr = np.nan
+
     with st.expander("Cardiologia", expanded=True):
         st.subheader("Risco Cardiovascular (PREVENT)")
         try:
-            # Calcular dependências
-            bmi = calcular_imc(st.session_state.weight, st.session_state.height_cm)
-            egfr = calcular_egfr_ckd_epi(st.session_state.creatinine, st.session_state.age, st.session_state.sex)
-            
             prevent_data = {
                 "sex": 1 if st.session_state.sex == "Feminino" else 0, "age": st.session_state.age, "tc": st.session_state.tc,
                 "hdl": st.session_state.hdl, "sbp": st.session_state.sbp, "dm": 1 if st.session_state.dm else 0,
-                "smoking": 1 if st.session_state.smoking else 0, "bmi": bmi, "egfr": egfr,
+                "smoking": 1 if st.session_state.smoking else 0, "bmi": calc_bmi, "egfr": calc_egfr,
                 "bptreat": 1 if st.session_state.bptreat else 0, "statin": 1 if st.session_state.statin else 0,
                 "uacr": st.session_state.uacr_val, "hba1c": st.session_state.hba1c_val
             }
             required_prevent = [prevent_data[k] for k in ['age', 'tc', 'hdl', 'sbp', 'bmi', 'egfr']]
-            if not all(v is not None for v in required_prevent): raise Exception()
+            if not all(v is not None and not math.isnan(v) for v in required_prevent): raise Exception()
             
             uacr_fornecido = prevent_data["uacr"] is not None
             hba1c_fornecido = prevent_data["hba1c"] is not None
@@ -805,11 +819,8 @@ def pagina_resumo():
     with st.expander("Endocrinologia", expanded=True):
         st.subheader("IMC")
         try:
-            imc_data = {"weight": st.session_state.weight, "height_cm": st.session_state.height_cm}
-            if not all(v is not None for v in imc_data.values()): raise Exception()
-            score_imc = calcular_imc(**imc_data)
-            st.metric("IMC", f"{formatar_score(score_imc, 1)} kg/m²")
-            exibir_interpretacao_imc(score_imc)
+            st.metric("IMC", f"{formatar_score(calc_bmi, 1)} kg/m²")
+            exibir_interpretacao_imc(calc_bmi)
         except:
             st.info("Dados insuficientes para calcular o IMC.")
 
@@ -849,11 +860,8 @@ def pagina_resumo():
     with st.expander("Nefrologia", expanded=True):
         st.subheader("eGFR (CKD-EPI 2021)")
         try:
-            egfr_data = {"creatinine": st.session_state.creatinine, "age": st.session_state.age, "sex_str": st.session_state.sex}
-            if not all(v is not None for v in egfr_data.values()): raise Exception()
-            score_egfr = calcular_egfr_ckd_epi(**egfr_data)
-            st.metric("eGFR (CKD-EPI 2021)", f"{formatar_score(score_egfr, 0)} mL/min/1.73 m²")
-            exibir_interpretacao_egfr(score_egfr)
+            st.metric("eGFR (CKD-EPI 2021)", f"{formatar_score(calc_egfr, 0)} mL/min/1.73 m²")
+            exibir_interpretacao_egfr(calc_egfr)
         except:
             st.info("Dados insuficientes para calcular o eGFR.")
 
@@ -863,7 +871,7 @@ def pagina_resumo():
 def initialize_session_state():
     """Define todos os valores possíveis no state para evitar erros na primeira execução."""
     params = {
-        "sex": "Feminino", "age": None, "bmi": None, "tc": None, "hdl": None, 
+        "sex": "Feminino", "age": None, "tc": None, "hdl": None, 
         "sbp": None, "dm": False, "smoking": False, 
         "bptreat": False, "statin": False, "uacr_val": None, "hba1c_val": None, 
         "bilirubin": None, "inr": None, "sodium": None, 
