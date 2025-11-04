@@ -712,9 +712,12 @@ def pagina_cardiologia():
         logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = np.nan, np.nan, np.nan
         modelo_utilizado = ""
 
+        # Preparar dados base (sem uacr e hba1c)
+        base_data = {k: v for k, v in prevent_data.items() if k not in ['uacr', 'hba1c']}
+
         if not uacr_fornecido and not hba1c_fornecido:
             modelo_utilizado = "Modelo 'Base' utilizado."
-            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**prevent_data)
+            logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**base_data)
         elif uacr_fornecido and not hba1c_fornecido:
             modelo_utilizado = "Modelo 'Base + RAC (UACR)' utilizado."
             logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**prevent_data)
@@ -959,7 +962,8 @@ def pagina_resumo():
             
             uacr_fornecido = prevent_data["uacr"] is not None
             hba1c_fornecido = prevent_data["hba1c"] is not None
-            if not uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**prevent_data)
+            base_data = {k: v for k, v in prevent_data.items() if k not in ['uacr', 'hba1c']}
+            if not uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_base_py(**base_data)
             elif uacr_fornecido and not hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_uacr_py(**prevent_data)
             elif not uacr_fornecido and hba1c_fornecido: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_hba1c_py(**prevent_data)
             else: logor_10yr_CVD, logor_10yr_ASCVD, logor_10yr_HF = calcular_prevent_full_py(**prevent_data)
