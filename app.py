@@ -409,11 +409,16 @@ def pagina_dados_paciente():
 
     # --- CORREÇÃO DO BUG DE PERSISTÊNCIA ---
     # Cada widget usa apenas o parâmetro 'key' para vincular automaticamente ao st.session_state
+    # Para manter compatibilidade com o resto do código que espera strings, usamos callbacks
     
     st.subheader("Dados Demográficos e Vitais")
     col1, col2 = st.columns(2)
     with col1:
-        st.radio("Sexo Biológico", ["Feminino", "Masculino"], horizontal=True, key="sex")
+        # Radio retorna o valor selecionado (string), não o índice
+        sex_options = ["Feminino", "Masculino"]
+        default_index = sex_options.index(st.session_state.sex) if st.session_state.sex in sex_options else 0
+        st.session_state.sex = st.radio("Sexo Biológico", sex_options, index=default_index, horizontal=True)
+        
         st.number_input("Idade (anos)", min_value=18, max_value=120, step=1, key="age", placeholder="Ex: 55")
     with col2:
         st.number_input("Peso (kg)", min_value=30.0, max_value=300.0, step=0.1, format="%.1f", key="weight", placeholder="Ex: 70.0")
@@ -458,10 +463,12 @@ def pagina_dados_paciente():
     with col2:
         st.markdown("**Sintomas (Gastro/Pneumo)**")
         ascites_options = ["Ausente", "Leve", "Moderada/Grave"]
-        st.selectbox("Ascite (Child-Pugh)", ascites_options, key="ascites")
+        default_ascites_index = ascites_options.index(st.session_state.ascites) if st.session_state.ascites in ascites_options else 0
+        st.session_state.ascites = st.selectbox("Ascite (Child-Pugh)", ascites_options, index=default_ascites_index)
         
         enceph_options = ["Ausente", "Grau 1-2", "Grau 3-4"]
-        st.selectbox("Encefalopatia (Child-Pugh)", enceph_options, key="encephalopathy")
+        default_enceph_index = enceph_options.index(st.session_state.encephalopathy) if st.session_state.encephalopathy in enceph_options else 0
+        st.session_state.encephalopathy = st.selectbox("Encefalopatia (Child-Pugh)", enceph_options, index=default_enceph_index)
         
         mmrc_options = [
             "Grau 0: Dispneia apenas com exercício intenso",
@@ -470,7 +477,8 @@ def pagina_dados_paciente():
             "Grau 3: Para para respirar após ~100m",
             "Grau 4: Tanta dispneia que não sai de casa"
         ]
-        st.selectbox("Dispneia (mMRC)", mmrc_options, key="mmrc_score")
+        default_mmrc_index = mmrc_options.index(st.session_state.mmrc_score) if st.session_state.mmrc_score in mmrc_options else 0
+        st.session_state.mmrc_score = st.selectbox("Dispneia (mMRC)", mmrc_options, index=default_mmrc_index)
 
     with col3:
         st.markdown("**Questionário CAT (DPOC)**")
