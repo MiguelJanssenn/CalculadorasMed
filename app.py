@@ -1043,7 +1043,7 @@ def main():
     initialize_session_state()
     
     # Menu da Barra Lateral
-    st.sidebar.title("Plataforma de Scores 🩺")
+    st.sidebar.title("Plataforma de Scores IA 🩺")
     st.sidebar.markdown("---")
     
     paginas = {
