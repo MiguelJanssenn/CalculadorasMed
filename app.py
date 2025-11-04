@@ -408,15 +408,13 @@ def pagina_dados_paciente():
     st.markdown("Insira os dados do paciente abaixo. Os resultados serão calculados automaticamente nas páginas de especialidade.")
 
     # --- CORREÇÃO DO BUG DE PERSISTÊNCIA ---
-    # Para widgets de seleção (radio/selectbox), precisamos:
-    # 1. Calcular o índice correto com base no valor armazenado no session state
-    # 2. Passar esse índice para o widget e armazenar o resultado
-    # Isso garante que o valor persista corretamente entre navegações de página
-    # O widget retorna o valor selecionado (string), não o índice
+    # Cada widget usa apenas o parâmetro 'key' para vincular automaticamente ao st.session_state
+    # Para manter compatibilidade com o resto do código que espera strings, usamos callbacks
     
     st.subheader("Dados Demográficos e Vitais")
     col1, col2 = st.columns(2)
     with col1:
+        # Radio retorna o valor selecionado (string), não o índice
         sex_options = ["Feminino", "Masculino"]
         default_index = sex_options.index(st.session_state.sex) if st.session_state.sex in sex_options else 0
         st.session_state.sex = st.radio("Sexo Biológico", sex_options, index=default_index, horizontal=True)
