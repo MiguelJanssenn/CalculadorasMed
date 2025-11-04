@@ -533,36 +533,36 @@ def pagina_dados_paciente():
         default_index = sex_options.index(st.session_state.sex) if st.session_state.sex in sex_options else 0
         st.session_state.sex = st.radio("Sexo Biológico", sex_options, index=default_index, horizontal=True)
         
-        st.number_input("Idade (anos)", min_value=18, max_value=120, step=1, key="age", placeholder="Ex: 55", value=None)
+        st.number_input("Idade (anos)", min_value=18, max_value=120, step=1, key="age", placeholder="Ex: 55")
     with col2:
-        st.number_input("Peso (kg)", min_value=30.0, max_value=300.0, step=0.1, format="%.1f", key="weight", placeholder="Ex: 70.0", value=None)
-        st.number_input("Altura (cm)", min_value=100.0, max_value=250.0, step=0.1, format="%.1f", key="height_cm", placeholder="Ex: 170.0", value=None)
+        st.number_input("Peso (kg)", min_value=30.0, max_value=300.0, step=0.1, format="%.1f", key="weight", placeholder="Ex: 70.0")
+        st.number_input("Altura (cm)", min_value=100.0, max_value=250.0, step=0.1, format="%.1f", key="height_cm", placeholder="Ex: 170.0")
 
     st.subheader("Dados Laboratoriais Unificados")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, step=0.1, format="%.1f", key="creatinine", placeholder="Ex: 1.0", value=None)
-        st.number_input("Bilirrubina Total (mg/dL)", min_value=0.1, max_value=50.0, step=0.1, format="%.1f", key="bilirubin", placeholder="Ex: 1.2", value=None)
-        st.number_input("Albumina Sérica (g/dL)", min_value=1.0, max_value=6.0, step=0.1, format="%.1f", key="albumin", placeholder="Ex: 4.0", value=None)
+        st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, step=0.1, format="%.1f", key="creatinine", placeholder="Ex: 1.0")
+        st.number_input("Bilirrubina Total (mg/dL)", min_value=0.1, max_value=50.0, step=0.1, format="%.1f", key="bilirubin", placeholder="Ex: 1.2")
+        st.number_input("Albumina Sérica (g/dL)", min_value=1.0, max_value=6.0, step=0.1, format="%.1f", key="albumin", placeholder="Ex: 4.0")
     with col2:
-        st.number_input("Sódio Sérico (mEq/L)", min_value=100, max_value=180, step=1, key="sodium", placeholder="Ex: 140", value=None)
-        st.number_input("INR", min_value=0.5, max_value=10.0, step=0.1, format="%.1f", key="inr", placeholder="Ex: 1.1", value=None)
-        st.number_input("Plaquetas (x10³/µL)", min_value=10, max_value=1000, step=1, key="platelets", placeholder="Ex: 250", value=None)
+        st.number_input("Sódio Sérico (mEq/L)", min_value=100, max_value=180, step=1, key="sodium", placeholder="Ex: 140")
+        st.number_input("INR", min_value=0.5, max_value=10.0, step=0.1, format="%.1f", key="inr", placeholder="Ex: 1.1")
+        st.number_input("Plaquetas (x10³/µL)", min_value=10, max_value=1000, step=1, key="platelets", placeholder="Ex: 250")
     with col3:
-        st.number_input("AST (TGO) (U/L)", min_value=1, max_value=1000, step=1, key="ast", placeholder="Ex: 25", value=None)
-        st.number_input("ALT (TGP) (U/L)", min_value=1, max_value=1000, step=1, key="alt", placeholder="Ex: 25", value=None)
+        st.number_input("AST (TGO) (U/L)", min_value=1, max_value=1000, step=1, key="ast", placeholder="Ex: 25")
+        st.number_input("ALT (TGP) (U/L)", min_value=1, max_value=1000, step=1, key="alt", placeholder="Ex: 25")
 
     st.subheader("Dados Metabólicos e de Risco")
     col1, col2 = st.columns(2)
     with col1:
-        st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, step=1, key="tc", placeholder="Ex: 200", value=None)
-        st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, step=1, key="hdl", placeholder="Ex: 50", value=None)
-        st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, step=1, key="sbp", placeholder="Ex: 120", value=None)
+        st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, step=1, key="tc", placeholder="Ex: 200")
+        st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, step=1, key="hdl", placeholder="Ex: 50")
+        st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, step=1, key="sbp", placeholder="Ex: 120")
     with col2:
-        st.number_input("Glicose de Jejum (mg/dL)", min_value=40, max_value=500, step=1, key="glucose_fasting", placeholder="Ex: 90", value=None)
-        st.number_input("Insulina de Jejum (µU/mL)", min_value=1.0, max_value=300.0, step=0.1, format="%.1f", key="insulin_fasting", placeholder="Ex: 8.0", value=None)
-        st.number_input("Relação Albumina/Creatinina Urinária (RAC) (mg/g)", min_value=0.0, max_value=5000.0, step=0.1, format="%.1f", key="uacr_val", placeholder="Opcional: Ex: 10.0", value=None)
-        st.number_input("Hemoglobina Glicada (HbA1c) (%)", min_value=3.0, max_value=20.0, step=0.1, format="%.1f", key="hba1c_val", placeholder="Opcional: Ex: 5.7", value=None)
+        st.number_input("Glicose de Jejum (mg/dL)", min_value=40, max_value=500, step=1, key="glucose_fasting", placeholder="Ex: 90")
+        st.number_input("Insulina de Jejum (µU/mL)", min_value=1.0, max_value=300.0, step=0.1, format="%.1f", key="insulin_fasting", placeholder="Ex: 8.0")
+        st.number_input("Relação Albumina/Creatinina Urinária (RAC) (mg/g)", min_value=0.0, max_value=5000.0, step=0.1, format="%.1f", key="uacr_val", placeholder="Opcional: Ex: 10.0")
+        st.number_input("Hemoglobina Glicada (HbA1c) (%)", min_value=3.0, max_value=20.0, step=0.1, format="%.1f", key="hba1c_val", placeholder="Opcional: Ex: 5.7")
 
     st.subheader("Histórico Clínico e Questionários")
     col1, col2, col3 = st.columns(3)
