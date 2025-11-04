@@ -306,7 +306,121 @@ def exibir_interpretacao_fib4(score, age):
     
     if age is not None and age > 65:
         low_cutoff = 2.0
-        
+    
+    # Criar barra de estratificação visual
+    st.markdown("##### Estratificação de Risco")
+    
+    # Determinar a posição do score na barra (0-100%)
+    max_display_score = 5.0  # Valor máximo para visualização
+    score_position = min(score / max_display_score * 100, 100)
+    
+    # Criar HTML para a barra colorida
+    bar_html = f"""
+    <style>
+    .fib4-bar-container {{
+        width: 100%;
+        height: 40px;
+        position: relative;
+        border-radius: 5px;
+        overflow: hidden;
+        margin: 10px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }}
+    .fib4-bar {{
+        display: flex;
+        height: 100%;
+        width: 100%;
+    }}
+    .fib4-low {{
+        background: linear-gradient(90deg, #28a745 0%, #5cb85c 100%);
+        width: {low_cutoff / max_display_score * 100}%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+    }}
+    .fib4-intermediate {{
+        background: linear-gradient(90deg, #ffc107 0%, #ff9800 100%);
+        width: {(high_cutoff - low_cutoff) / max_display_score * 100}%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+    }}
+    .fib4-high {{
+        background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+        width: {(max_display_score - high_cutoff) / max_display_score * 100}%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+    }}
+    .fib4-marker {{
+        position: absolute;
+        top: 0;
+        left: {score_position}%;
+        width: 3px;
+        height: 100%;
+        background-color: black;
+        z-index: 10;
+    }}
+    .fib4-marker::after {{
+        content: '▼';
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 16px;
+        color: black;
+    }}
+    .fib4-score-label {{
+        position: absolute;
+        top: -40px;
+        left: {score_position}%;
+        transform: translateX(-50%);
+        background-color: black;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+        white-space: nowrap;
+    }}
+    .fib4-legend {{
+        display: flex;
+        justify-content: space-between;
+        margin-top: 5px;
+        font-size: 11px;
+        color: #666;
+    }}
+    </style>
+    <div class="fib4-bar-container">
+        <div class="fib4-score-label">{score:.2f}</div>
+        <div class="fib4-marker"></div>
+        <div class="fib4-bar">
+            <div class="fib4-low">Baixo Risco</div>
+            <div class="fib4-intermediate">Indeterminado</div>
+            <div class="fib4-high">Alto Risco</div>
+        </div>
+    </div>
+    <div class="fib4-legend">
+        <span>0</span>
+        <span>{low_cutoff}</span>
+        <span>{high_cutoff}</span>
+        <span>{max_display_score}+</span>
+    </div>
+    """
+    
+    st.markdown(bar_html, unsafe_allow_html=True)
+    st.markdown("")  # Espaçamento
+    
+    # Interpretação textual
     if score < low_cutoff:
         st.success(f"**Score {score:.2f} (< {low_cutoff}):** Baixo risco de fibrose avançada (VPN > 90%).")
     elif score > high_cutoff:
@@ -419,36 +533,36 @@ def pagina_dados_paciente():
         default_index = sex_options.index(st.session_state.sex) if st.session_state.sex in sex_options else 0
         st.session_state.sex = st.radio("Sexo Biológico", sex_options, index=default_index, horizontal=True)
         
-        st.number_input("Idade (anos)", min_value=18, max_value=120, step=1, key="age", placeholder="Ex: 55")
+        st.number_input("Idade (anos)", min_value=18, max_value=120, step=1, key="age", placeholder="Ex: 55", value=None)
     with col2:
-        st.number_input("Peso (kg)", min_value=30.0, max_value=300.0, step=0.1, format="%.1f", key="weight", placeholder="Ex: 70.0")
-        st.number_input("Altura (cm)", min_value=100.0, max_value=250.0, step=0.1, format="%.1f", key="height_cm", placeholder="Ex: 170.0")
+        st.number_input("Peso (kg)", min_value=30.0, max_value=300.0, step=0.1, format="%.1f", key="weight", placeholder="Ex: 70.0", value=None)
+        st.number_input("Altura (cm)", min_value=100.0, max_value=250.0, step=0.1, format="%.1f", key="height_cm", placeholder="Ex: 170.0", value=None)
 
     st.subheader("Dados Laboratoriais Unificados")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, step=0.1, format="%.1f", key="creatinine", placeholder="Ex: 1.0")
-        st.number_input("Bilirrubina Total (mg/dL)", min_value=0.1, max_value=50.0, step=0.1, format="%.1f", key="bilirubin", placeholder="Ex: 1.2")
-        st.number_input("Albumina Sérica (g/dL)", min_value=1.0, max_value=6.0, step=0.1, format="%.1f", key="albumin", placeholder="Ex: 4.0")
+        st.number_input("Creatinina Sérica (mg/dL)", min_value=0.1, max_value=20.0, step=0.1, format="%.1f", key="creatinine", placeholder="Ex: 1.0", value=None)
+        st.number_input("Bilirrubina Total (mg/dL)", min_value=0.1, max_value=50.0, step=0.1, format="%.1f", key="bilirubin", placeholder="Ex: 1.2", value=None)
+        st.number_input("Albumina Sérica (g/dL)", min_value=1.0, max_value=6.0, step=0.1, format="%.1f", key="albumin", placeholder="Ex: 4.0", value=None)
     with col2:
-        st.number_input("Sódio Sérico (mEq/L)", min_value=100, max_value=180, step=1, key="sodium", placeholder="Ex: 140")
-        st.number_input("INR", min_value=0.5, max_value=10.0, step=0.1, format="%.1f", key="inr", placeholder="Ex: 1.1")
-        st.number_input("Plaquetas (x10³/µL)", min_value=10, max_value=1000, step=1, key="platelets", placeholder="Ex: 250")
+        st.number_input("Sódio Sérico (mEq/L)", min_value=100, max_value=180, step=1, key="sodium", placeholder="Ex: 140", value=None)
+        st.number_input("INR", min_value=0.5, max_value=10.0, step=0.1, format="%.1f", key="inr", placeholder="Ex: 1.1", value=None)
+        st.number_input("Plaquetas (x10³/µL)", min_value=10, max_value=1000, step=1, key="platelets", placeholder="Ex: 250", value=None)
     with col3:
-        st.number_input("AST (TGO) (U/L)", min_value=1, max_value=1000, step=1, key="ast", placeholder="Ex: 25")
-        st.number_input("ALT (TGP) (U/L)", min_value=1, max_value=1000, step=1, key="alt", placeholder="Ex: 25")
+        st.number_input("AST (TGO) (U/L)", min_value=1, max_value=1000, step=1, key="ast", placeholder="Ex: 25", value=None)
+        st.number_input("ALT (TGP) (U/L)", min_value=1, max_value=1000, step=1, key="alt", placeholder="Ex: 25", value=None)
 
     st.subheader("Dados Metabólicos e de Risco")
     col1, col2 = st.columns(2)
     with col1:
-        st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, step=1, key="tc", placeholder="Ex: 200")
-        st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, step=1, key="hdl", placeholder="Ex: 50")
-        st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, step=1, key="sbp", placeholder="Ex: 120")
+        st.number_input("Colesterol Total (mg/dL)", min_value=100, max_value=400, step=1, key="tc", placeholder="Ex: 200", value=None)
+        st.number_input("Colesterol HDL (mg/dL)", min_value=15, max_value=150, step=1, key="hdl", placeholder="Ex: 50", value=None)
+        st.number_input("Pressão Arterial Sistólica (PAS) (mm Hg)", min_value=80, max_value=250, step=1, key="sbp", placeholder="Ex: 120", value=None)
     with col2:
-        st.number_input("Glicose de Jejum (mg/dL)", min_value=40, max_value=500, step=1, key="glucose_fasting", placeholder="Ex: 90")
-        st.number_input("Insulina de Jejum (µU/mL)", min_value=1.0, max_value=300.0, step=0.1, format="%.1f", key="insulin_fasting", placeholder="Ex: 8.0")
-        st.number_input("Relação Albumina/Creatinina Urinária (RAC) (mg/g)", min_value=0.0, max_value=5000.0, step=0.1, format="%.1f", key="uacr_val", placeholder="Opcional: Ex: 10.0")
-        st.number_input("Hemoglobina Glicada (HbA1c) (%)", min_value=3.0, max_value=20.0, step=0.1, format="%.1f", key="hba1c_val", placeholder="Opcional: Ex: 5.7")
+        st.number_input("Glicose de Jejum (mg/dL)", min_value=40, max_value=500, step=1, key="glucose_fasting", placeholder="Ex: 90", value=None)
+        st.number_input("Insulina de Jejum (µU/mL)", min_value=1.0, max_value=300.0, step=0.1, format="%.1f", key="insulin_fasting", placeholder="Ex: 8.0", value=None)
+        st.number_input("Relação Albumina/Creatinina Urinária (RAC) (mg/g)", min_value=0.0, max_value=5000.0, step=0.1, format="%.1f", key="uacr_val", placeholder="Opcional: Ex: 10.0", value=None)
+        st.number_input("Hemoglobina Glicada (HbA1c) (%)", min_value=3.0, max_value=20.0, step=0.1, format="%.1f", key="hba1c_val", placeholder="Opcional: Ex: 5.7", value=None)
 
     st.subheader("Histórico Clínico e Questionários")
     col1, col2, col3 = st.columns(3)
@@ -879,30 +993,30 @@ def pagina_resumo():
 def initialize_session_state():
     """Define todos os valores possíveis no state para evitar erros na primeira execução."""
     params = {
-        # Dados demográficos e vitais - usando valores padrão típicos
+        # Dados demográficos e vitais - iniciando em branco
         "sex": "Feminino", 
-        "age": 55, 
-        "weight": 70.0, 
-        "height_cm": 170.0,
+        "age": None, 
+        "weight": None, 
+        "height_cm": None,
         
-        # Dados laboratoriais - valores padrão
-        "creatinine": 1.0,
-        "bilirubin": 1.0,
-        "albumin": 4.0,
-        "sodium": 140,
-        "inr": 1.0,
-        "platelets": 250,
-        "ast": 25,
-        "alt": 25,
+        # Dados laboratoriais - iniciando em branco
+        "creatinine": None,
+        "bilirubin": None,
+        "albumin": None,
+        "sodium": None,
+        "inr": None,
+        "platelets": None,
+        "ast": None,
+        "alt": None,
         
-        # Dados metabólicos e de risco
-        "tc": 200,
-        "hdl": 50,
-        "sbp": 120,
-        "glucose_fasting": 90,
-        "insulin_fasting": 8.0,
-        "uacr_val": 10.0,
-        "hba1c_val": 5.5,
+        # Dados metabólicos e de risco - iniciando em branco
+        "tc": None,
+        "hdl": None,
+        "sbp": None,
+        "glucose_fasting": None,
+        "insulin_fasting": None,
+        "uacr_val": None,
+        "hba1c_val": None,
         
         # Histórico clínico (booleanos)
         "dm": False, 
@@ -936,13 +1050,13 @@ def main():
     st.sidebar.markdown("---")
     
     paginas = {
-        "Dados do Paciente": pagina_dados_paciente,
-        "Resumo Geral": pagina_resumo,
-        "Cardiologia": pagina_cardiologia,
-        "Gastroenterologia": pagina_gastroenterologia,
-        "Endocrinologia": pagina_endocrinologia,
-        "Pneumologia": pagina_pneumologia,
-        "Nefrologia": pagina_nefrologia,
+        "📋 Dados do Paciente": pagina_dados_paciente,
+        "📊 Resumo Geral": pagina_resumo,
+        "❤️ Cardiologia": pagina_cardiologia,
+        "🫀 Gastroenterologia": pagina_gastroenterologia,
+        "🩸 Endocrinologia": pagina_endocrinologia,
+        "🫁 Pneumologia": pagina_pneumologia,
+        "🩺 Nefrologia": pagina_nefrologia,
     }
     
     selecao = st.sidebar.radio("Navegação:", list(paginas.keys()), key="pagina_selecionada")
