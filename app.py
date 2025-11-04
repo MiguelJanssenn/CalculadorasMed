@@ -310,9 +310,13 @@ def exibir_interpretacao_fib4(score, age):
     # Criar barra de estratificação visual
     st.markdown("##### Estratificação de Risco")
     
+    # Constante para valor máximo de visualização
+    MAX_DISPLAY_SCORE = 5.0
+    
     # Determinar a posição do score na barra (0-100%)
-    max_display_score = 5.0  # Valor máximo para visualização
-    score_position = min(score / max_display_score * 100, 100)
+    score_position = min(score / MAX_DISPLAY_SCORE * 100, 100)
+    # Garantir que o marcador fique dentro dos limites visuais
+    score_position_safe = max(2, min(score_position, 98))
     
     # Criar HTML para a barra colorida
     bar_html = f"""
@@ -333,7 +337,7 @@ def exibir_interpretacao_fib4(score, age):
     }}
     .fib4-low {{
         background: linear-gradient(90deg, #28a745 0%, #5cb85c 100%);
-        width: {low_cutoff / max_display_score * 100}%;
+        width: {low_cutoff / MAX_DISPLAY_SCORE * 100}%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -343,7 +347,7 @@ def exibir_interpretacao_fib4(score, age):
     }}
     .fib4-intermediate {{
         background: linear-gradient(90deg, #ffc107 0%, #ff9800 100%);
-        width: {(high_cutoff - low_cutoff) / max_display_score * 100}%;
+        width: {(high_cutoff - low_cutoff) / MAX_DISPLAY_SCORE * 100}%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -353,7 +357,7 @@ def exibir_interpretacao_fib4(score, age):
     }}
     .fib4-high {{
         background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
-        width: {(max_display_score - high_cutoff) / max_display_score * 100}%;
+        width: {(MAX_DISPLAY_SCORE - high_cutoff) / MAX_DISPLAY_SCORE * 100}%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -364,7 +368,7 @@ def exibir_interpretacao_fib4(score, age):
     .fib4-marker {{
         position: absolute;
         top: 0;
-        left: {score_position}%;
+        left: {score_position_safe}%;
         width: 3px;
         height: 100%;
         background-color: black;
@@ -382,7 +386,7 @@ def exibir_interpretacao_fib4(score, age):
     .fib4-score-label {{
         position: absolute;
         top: -40px;
-        left: {score_position}%;
+        left: {score_position_safe}%;
         transform: translateX(-50%);
         background-color: black;
         color: white;
@@ -413,7 +417,7 @@ def exibir_interpretacao_fib4(score, age):
         <span>0</span>
         <span>{low_cutoff}</span>
         <span>{high_cutoff}</span>
-        <span>{max_display_score}+</span>
+        <span>{MAX_DISPLAY_SCORE}+</span>
     </div>
     """
     
